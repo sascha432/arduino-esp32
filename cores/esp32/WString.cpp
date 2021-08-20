@@ -120,18 +120,6 @@ String::String(unsigned long long value) {
     *this = buf;
 }
 
-// String::String(long long value, unsigned char base) {
-//     init();
-//     char buf[1 + 8 * sizeof(value)];
-//     *this = lltoa(value, buf, sizeof(buf), base);
-// }
-
-// String::String(unsigned long long value, unsigned char base) {
-//     init();
-//     char buf[1 + 8 * sizeof(value)];
-//     *this = ulltoa(value, buf, sizeof(buf), base);
-// }
-
 String::String(float value, unsigned char decimalPlaces) {
     init();
     char buf[33];
@@ -319,9 +307,9 @@ String & String::operator =(const __FlashStringHelper *pstr) {
     return *this;
 }
 
-// /*********************************************/
-// /*  concat                                   */
-// /*********************************************/
+/*********************************************/
+/*  concat                                   */
+/*********************************************/
 
 unsigned char String::concat(const String &s) {
     // Special case if we're concatting ourself (s += s;) since we may end up
@@ -504,9 +492,9 @@ StringSumHelper & operator + (const StringSumHelper &lhs, const __FlashStringHel
     return a;
 }
 
-// /*********************************************/
-// /*  Comparison                               */
-// /*********************************************/
+/*********************************************/
+/*  Comparison                               */
+/*********************************************/
 
 int String::compareTo(const String &s) const {
     if(!buffer() || !s.buffer()) {
@@ -518,18 +506,6 @@ int String::compareTo(const String &s) const {
     }
     return strcmp(buffer(), s.buffer());
 }
-
-// bool String::equals(const String &s2) const {
-//     return (len() == s2.len() && compareTo(s2) == 0);
-// }
-
-// bool String::equals(const char *cstr) const {
-//     if(len() == 0)
-//         return (cstr == NULL || *cstr == 0);
-//     if(cstr == NULL)
-//         return buffer()[0] == 0;
-//     return strcmp(buffer(), cstr) == 0;
-// }
 
 bool String::equalsConstantTime(const String &s2) const {
     // To avoid possible time-based attacks present function
@@ -561,10 +537,6 @@ bool String::equalsConstantTime(const String &s2) const {
 /*********************************************/
 /*  Character Access                         */
 /*********************************************/
-
-// char String::charAt(unsigned int loc) const {
-//     return operator[](loc);
-// }
 
 void String::setCharAt(unsigned int loc, char c) {
     if(loc < len())
@@ -613,55 +585,6 @@ int String::indexOf(char ch, unsigned int fromIndex) const {
     return temp - buffer();
 }
 
-// int String::indexOf(const String &s2) const {
-//     return indexOf(s2, 0);
-// }
-
-// int String::indexOf(const String &s2, unsigned int fromIndex) const {
-//     if (fromIndex >= len())
-//         return -1;
-//     const char *found = strstr(buffer() + fromIndex, s2.buffer());
-//     if (found == NULL)
-//         return -1;
-//     return found - buffer();
-// }
-
-// int String::lastIndexOf(char theChar) const {
-//     return lastIndexOf(theChar, len() - 1);
-// }
-
-// int String::lastIndexOf(char ch, unsigned int fromIndex) const {
-//     if(fromIndex >= len())
-//         return -1;
-//     char tempchar = buffer()[fromIndex + 1];
-//     wbuffer()[fromIndex + 1] = '\0';
-//     char* temp = strrchr(wbuffer(), ch);
-//     wbuffer()[fromIndex + 1] = tempchar;
-//     if(temp == NULL)
-//         return -1;
-//     return temp - buffer();
-// }
-
-// int String::lastIndexOf(const String &s2) const {
-//     return lastIndexOf(s2, len() - s2.len());
-// }
-
-// int String::lastIndexOf(const String &s2, unsigned int fromIndex) const {
-//     if(s2.len() == 0 || len() == 0 || s2.len() > len())
-//         return -1;
-//     if(fromIndex >= len())
-//         fromIndex = len() - 1;
-//     int found = -1;
-//     for(char *p = wbuffer(); p <= wbuffer() + fromIndex; p++) {
-//         p = strstr(p, s2.buffer());
-//         if(!p)
-//             break;
-//         if((unsigned int) (p - wbuffer()) <= fromIndex)
-//             found = p - buffer();
-//     }
-//     return found;
-// }
-
 String String::substring(unsigned int left, unsigned int right) const {
     if(left > right) {
         unsigned int temp = right;
@@ -683,7 +606,6 @@ String String::substring(unsigned int left, unsigned int right) const {
 /*********************************************/
 /*  Modification                             */
 /*********************************************/
-
 
 void String::remove(unsigned int index, unsigned int count) {
     if(index >= len()) {
@@ -754,23 +676,6 @@ bool String::_replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceL
     }
     return true;
 }
-
-// void String::remove(unsigned int index, unsigned int count) {
-//     if (index >= len()) {
-//         return;
-//     }
-//     if (count <= 0) {
-//         return;
-//     }
-//     if (count > len() - index) {
-//         count = len() - index;
-//     }
-//     char *writeTo = wbuffer() + index;
-//     unsigned int newlen = len() - count;
-//     setLen(newlen);
-//     memmove(writeTo, wbuffer() + index + count, newlen - index);
-//     wbuffer()[newlen] = 0;
-// }
 
 String &String::toLowerCase(void) {
     if (!buffer())
