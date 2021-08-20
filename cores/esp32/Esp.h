@@ -69,6 +69,9 @@ public:
     uint32_t getFreeHeap(); //available heap
     uint32_t getMinFreeHeap(); //lowest level of free heap since boot
     uint32_t getMaxAllocHeap(); //largest block of heap that can be allocated at once
+    uint32_t getHeapFragmentation() const {
+        rturn 0;
+    }
 
     //SPI RAM
     uint32_t getPsramSize();
@@ -100,6 +103,13 @@ public:
     bool flashEraseSector(uint32_t sector);
     bool flashWrite(uint32_t offset, uint32_t *data, size_t size);
     bool flashRead(uint32_t offset, uint32_t *data, size_t size);
+
+    bool flashWrite(uint32_t offset, const uint8_t *data, size_t size) {
+        return flashWrite(offset, reinterpret_cast<uint32_t *>(const_cast<uint8_t *>(data)), size);
+    }
+    bool flashRead(uint32_t offset, uint8_t *data, size_t size) {
+        return flashRead(offset, reinterpret_cast<uint32_t *>(data), size);
+    }
 
     bool partitionEraseRange(const esp_partition_t *partition, uint32_t offset, size_t size);
     bool partitionWrite(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size);

@@ -76,6 +76,10 @@ public:
     const char* path() const;
     const char* name() const;
 
+    String fullName() const { //TODO
+        return path() + String('/') + name();
+    }
+
     boolean isDirectory(void);
     File openNextFile(const char* mode = FILE_READ);
     void rewindDirectory(void);
