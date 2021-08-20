@@ -19,7 +19,8 @@
 			"vector": "cpp",
 			"xhash": "cpp",
 			"xtree": "cpp",
-			"xutility": "cpp"
+			"xutility": "cpp",
+			"esp_intr_alloc.h": "c"
 		}
 	}
 }

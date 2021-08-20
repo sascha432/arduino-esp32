@@ -376,6 +376,27 @@ bool EspClass::flashRead(uint32_t offset, uint32_t *data, size_t size)
     return spi_flash_read(offset, (uint32_t*) data, size) == ESP_OK;
 }
 
+bool EspClass::flashWrite(uint32_t offset, const uint8_t *data, size_t size)
+{
+    if ((offset & 0x03) == 0 && ((uint32_t)data & 0x03) == 0) {
+        return flashWrite(offset, reinterpret_cast<uint32_t *>(const_cast<uint8_t *>(data)), size);
+    }
+    // TODO write unaligned
+    #warning TODO
+    return flashWrite(offset, reinterpret_cast<uint32_t *>(const_cast<uint8_t *>(data)), size);
+}
+
+bool EspClass::flashRead(uint32_t offset, uint8_t *data, size_t size)
+{
+    if ((offset & 0x03) == 0 && ((uint32_t)data & 0x03) == 0) {
+        return flashRead(offset, reinterpret_cast<uint32_t *>(data), size);
+    }
+    // TODO read unaligned
+    #warning TODO
+    return flashRead(offset, reinterpret_cast<uint32_t *>(data), size);
+}
+
+
 bool EspClass::partitionEraseRange(const esp_partition_t *partition, uint32_t offset, size_t size)
 {
     return esp_partition_erase_range(partition, offset, size) == ESP_OK;
