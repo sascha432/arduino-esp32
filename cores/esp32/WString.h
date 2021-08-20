@@ -931,16 +931,12 @@ class String {
             invalidate();
             return rPtr;
         }
-        void remove(unsigned int index);
-        void remove(unsigned int index, unsigned int count);
-        void toLowerCase(void);
-        void toUpperCase(void);
-        void trim(void);
+        void remove(unsigned int index, unsigned int count = (unsigned int)-1);
 
         // parsing/conversion
         long toInt(void) const;
         float toFloat(void) const;
-	double toDouble(void) const;
+	    double toDouble(void) const;
 
     protected:
         // Contains the string info when we're not in SSO mode
@@ -991,7 +987,11 @@ class String {
         void init(void);
         void invalidate(void);
         unsigned char changeBuffer(unsigned int maxStrLen);
+
+    public:
         unsigned char concat(const char *cstr, unsigned int length);
+
+    protected:
 
         // copy and move
         String & copy(const char *cstr, unsigned int length);

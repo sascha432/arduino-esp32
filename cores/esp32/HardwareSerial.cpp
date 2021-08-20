@@ -39,6 +39,8 @@
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_SERIAL)
 #if ARDUINO_USB_CDC_ON_BOOT //Serial used for USB CDC
 HardwareSerial Serial0(0);
+#elif defined(HAVE_KFC_FIRMWARE_VERSION)
+// Serial in serial_handler.cpp
 #else
 HardwareSerial Serial(0);
 #endif

@@ -100,7 +100,7 @@ public:
 
     size_t setRxBufferSize(size_t);
     void setDebugOutput(bool);
-    
+
     void setRxInvert(bool);
 
 protected:
@@ -120,6 +120,8 @@ extern void serialEventRun(void) __attribute__((weak));
 #include "USB.h"
 #include "USBCDC.h"
 extern HardwareSerial Serial0;
+#elif defined(HAVE_KFC_FIRMWARE_VERSION)
+extern Stream &Serial;
 #else
 extern HardwareSerial Serial;
 #endif
