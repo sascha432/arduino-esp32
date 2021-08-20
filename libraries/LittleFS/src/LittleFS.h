@@ -19,6 +19,24 @@
 namespace fs
 {
 
+struct FSInfo {
+    size_t totalBytes;
+    size_t usedBytes;
+    int blockSize;
+    int maxOpenFiles;
+    int maxPathLength;
+    int pageSize;
+
+    FSInfo(size_t _totalBytes = 0, size_t _usedBytes = 0, int _blockSize = 4096, int _pageSize = 256, int _maxOpenFiles = 10, int _maxPathLength = LFS_NAME_MAX) :
+        totalBytes(_totalBytes),
+        usedBytes(_usedBytes),
+        blockSize(_blockSize),
+        maxOpenFiles(_maxOpenFiles),
+        maxPathLength(_maxPathLength),
+        pageSize(_pageSize)
+    {}
+};
+
 class LittleFSFS : public FS
 {
 public:
@@ -29,6 +47,8 @@ public:
     size_t totalBytes();
     size_t usedBytes();
     void end();
+
+    void info(FSInfo &info);
 
 private:
     char * partitionLabel_;

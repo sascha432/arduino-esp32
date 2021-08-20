@@ -122,6 +122,16 @@ bool LittleFSFS::format()
     return true;
 }
 
+void LittleFSFS::info(FSInfo &info)
+{
+    size_t total, used;
+    if (esp_littlefs_info(partitionLabel_, &total, &used)) {
+        total = 0;
+        used = 0;
+    }
+    info = FSInfo(total, used, 4096, 256);
+}
+
 size_t LittleFSFS::totalBytes()
 {
     size_t total,used;
