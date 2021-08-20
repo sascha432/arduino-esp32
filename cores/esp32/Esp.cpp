@@ -42,7 +42,7 @@ extern "C" {
 #elif CONFIG_IDF_TARGET_ESP32C3
 #include "esp32c3/rom/spi_flash.h"
 #define ESP_FLASH_IMAGE_BASE 0x0000     // Esp32c3 is located at 0x0000
-#else 
+#else
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
 #else // ESP32 Before IDF 4.0
@@ -187,7 +187,7 @@ static uint32_t sketchSize(sketchSize_t response) {
         return data.image_len;
     }
 }
-    
+
 uint32_t EspClass::getSketchSize () {
     return sketchSize(SKETCH_SIZE_TOTAL);
 }
@@ -376,17 +376,17 @@ bool EspClass::flashRead(uint32_t offset, uint32_t *data, size_t size)
     return spi_flash_read(offset, (uint32_t*) data, size) == ESP_OK;
 }
 
-bool EspClass::partitionEraseRange(const esp_partition_t *partition, uint32_t offset, size_t size) 
+bool EspClass::partitionEraseRange(const esp_partition_t *partition, uint32_t offset, size_t size)
 {
     return esp_partition_erase_range(partition, offset, size) == ESP_OK;
 }
 
-bool EspClass::partitionWrite(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size) 
+bool EspClass::partitionWrite(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size)
 {
     return esp_partition_write(partition, offset, data, size) == ESP_OK;
 }
 
-bool EspClass::partitionRead(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size) 
+bool EspClass::partitionRead(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size)
 {
     return esp_partition_read(partition, offset, data, size) == ESP_OK;
 }
@@ -396,4 +396,23 @@ uint64_t EspClass::getEfuseMac(void)
     uint64_t _chipmacid = 0LL;
     esp_efuse_mac_get_default((uint8_t*) (&_chipmacid));
     return _chipmacid;
+}
+
+uint8_t *EspClass::random(uint8_t *resultArray, const size_t outputSizeBytes)
+{
+    auto begin = resultArray;
+    auto end = begin + outputSizeBytes;
+    while(begin < end) {
+        *begin++ = random();
+    }
+    return resultArray;
+}
+
+uint32_t EspClass::random()
+{
+    static bool init = false;
+    if (!init) {
+        srand(micros());
+    }
+    return rand();
 }

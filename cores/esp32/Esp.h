@@ -69,7 +69,8 @@ public:
     uint32_t getFreeHeap(); //available heap
     uint32_t getMinFreeHeap(); //lowest level of free heap since boot
     uint32_t getMaxAllocHeap(); //largest block of heap that can be allocated at once
-    uint32_t getHeapFragmentation() const {
+
+    uint32_t getHeapFragmentation() const { // esp8266 compat
         return 0;
     }
 
@@ -116,6 +117,9 @@ public:
     bool partitionRead(const esp_partition_t *partition, uint32_t offset, uint32_t *data, size_t size);
 
     uint64_t getEfuseMac();
+
+    static uint8_t *random(uint8_t *resultArray, const size_t outputSizeBytes);
+    static uint32_t random();
 
 };
 
