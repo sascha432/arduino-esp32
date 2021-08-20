@@ -15,6 +15,7 @@
 #define _LITTLEFS_H_
 
 #include "FS.h"
+#include "littlefs/lfs.h"
 
 namespace fs
 {

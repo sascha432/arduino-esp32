@@ -890,7 +890,7 @@ class String {
 
         // returns allocated memory
         inline size_t __getAllocSize() const {
-#if defined(ESP8266)
+#if ESP8266 || ESP32
             if (isSSO()) {
                 return 0;
             }
@@ -931,12 +931,6 @@ class String {
             invalidate();
             return rPtr;
         }
-        void remove(unsigned int index, unsigned int count = (unsigned int)-1);
-
-        // parsing/conversion
-        long toInt(void) const;
-        float toFloat(void) const;
-	    double toDouble(void) const;
 
     protected:
         // Contains the string info when we're not in SSO mode

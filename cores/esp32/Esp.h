@@ -70,7 +70,7 @@ public:
     uint32_t getMinFreeHeap(); //lowest level of free heap since boot
     uint32_t getMaxAllocHeap(); //largest block of heap that can be allocated at once
     uint32_t getHeapFragmentation() const {
-        rturn 0;
+        return 0;
     }
 
     //SPI RAM
