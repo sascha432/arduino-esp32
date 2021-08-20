@@ -187,10 +187,19 @@ class String {
         bool operator !=(const char *cstr) const {
             return !equals(cstr);
         }
-        bool operator <(const String &rhs) const;
-        bool operator >(const String &rhs) const;
-        bool operator <=(const String &rhs) const;
-        bool operator >=(const String &rhs) const;
+        bool operator<(const String &rhs) const {
+            return compareTo(rhs) < 0;
+        }
+        bool operator>(const String &rhs) const {
+            return compareTo(rhs) > 0;
+        }
+        bool operator<=(const String &rhs) const {
+            return compareTo(rhs) <= 0;
+        }
+        bool operator>=(const String &rhs) const {
+            return compareTo(rhs) >= 0;
+        }
+
         bool equalsConstantTime(const String &s) const;
 
     // additional operators for char and const __FashStringHelper *

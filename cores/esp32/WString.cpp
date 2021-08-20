@@ -523,48 +523,16 @@ int String::compareTo(const String &s) const {
     return strcmp(buffer(), s.buffer());
 }
 
-unsigned char String::equals(const String &s2) const {
+bool String::equals(const String &s2) const {
     return (len() == s2.len() && compareTo(s2) == 0);
 }
 
-unsigned char String::equals(const char *cstr) const {
+bool String::equals(const char *cstr) const {
     if(len() == 0)
         return (cstr == NULL || *cstr == 0);
     if(cstr == NULL)
         return buffer()[0] == 0;
     return strcmp(buffer(), cstr) == 0;
-}
-
-bool String::operator<(const String &rhs) const {
-    return compareTo(rhs) < 0;
-}
-
-bool String::operator>(const String &rhs) const {
-    return compareTo(rhs) > 0;
-}
-
-bool String::operator<=(const String &rhs) const {
-    return compareTo(rhs) <= 0;
-}
-
-bool String::operator>=(const String &rhs) const {
-    return compareTo(rhs) >= 0;
-}
-
-bool String::equalsIgnoreCase(const String &s2) const {
-    if(this == &s2)
-        return 1;
-    if(len() != s2.len())
-        return 0;
-    if(len() == 0)
-        return 1;
-    const char *p1 = buffer();
-    const char *p2 = s2.buffer();
-    while(*p1) {
-        if(tolower(*p1++) != tolower(*p2++))
-            return 0;
-    }
-    return 1;
 }
 
 bool String::equalsConstantTime(const String &s2) const {
@@ -720,13 +688,6 @@ String String::substring(unsigned int left, unsigned int right) const {
 /*  Modification                             */
 /*********************************************/
 
-
-void String::remove(unsigned int index) {
-    // Pass the biggest integer as the count. The remove method
-    // below will take care of truncating it at the end of the
-    // string.
-    remove(index, (unsigned int) -1);
-}
 
 void String::remove(unsigned int index, unsigned int count) {
     if(index >= len()) {
