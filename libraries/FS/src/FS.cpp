@@ -161,6 +161,18 @@ const char* File::name() const
     return _p->name();
 }
 
+String File::fullName() const
+{
+    if (!*this) {
+        return F("INVALID");
+    }
+    String tmp = path();
+    tmp.reserve(tmp.length() + strlen(name()) + 1);
+    tmp += '/';
+    tmp += name();
+    return tmp;
+}
+
 //to implement
 boolean File::isDirectory(void)
 {

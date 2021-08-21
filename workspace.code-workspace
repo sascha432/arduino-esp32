@@ -20,7 +20,9 @@
 			"xhash": "cpp",
 			"xtree": "cpp",
 			"xutility": "cpp",
-			"esp_intr_alloc.h": "c"
+			"esp_intr_alloc.h": "c",
+			"future": "cpp",
+			"system_error": "cpp"
 		}
 	}
 }
