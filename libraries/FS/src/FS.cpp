@@ -164,7 +164,7 @@ const char* File::name() const
 String File::fullName() const
 {
     if (!*this) {
-        return F("INVALID");
+        return String();
     }
     String tmp = path();
     tmp.reserve(tmp.length() + strlen(name()) + 1);
