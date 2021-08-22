@@ -137,7 +137,7 @@ String::String(double value, unsigned char decimalPlaces) {
 /*********************************************/
 
 void String::init(void) {
-    setSSO(false);
+    setSSO(true);
     setBuffer(nullptr);
     setCapacity(0);
     setLen(0);
