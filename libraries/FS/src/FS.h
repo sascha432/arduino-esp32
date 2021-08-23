@@ -75,7 +75,7 @@ public:
     time_t getLastWrite();
     const char* path() const;
     const char* name() const;
-    String fullName() const;
+    const char *fullName() const;
 
     boolean isDirectory(void);
     File openNextFile(const char* mode = FILE_READ);
@@ -84,6 +84,11 @@ public:
 protected:
     FileImplPtr _p;
 };
+
+inline const char *File::fullName() const
+{
+    return path();
+}
 
 class FS
 {
