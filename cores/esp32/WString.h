@@ -721,8 +721,7 @@ class String {
     public:
         // search
         int indexOf(char ch, unsigned int fromIndex = 0) const;
-        int indexOf(const String &str) const;
-        int indexOf(const String &str, unsigned int fromIndex) const;
+        int indexOf(const String &str, unsigned int fromIndex = 0) const;
 
         int indexOf(const char *str, unsigned int fromIndex = 0) const {
             return _indexOf(str, fromIndex, ~0U);
