@@ -129,7 +129,7 @@ void LittleFSFS::info(FSInfo &info)
         total = 0;
         used = 0;
     }
-    info = FSInfo(total, used, 4096, 256);
+    info = FSInfo(total, used, 4096, CONFIG_LITTLEFS_PAGE_SIZE);
 }
 
 size_t LittleFSFS::totalBytes()

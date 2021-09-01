@@ -16,6 +16,7 @@
 
 #include "FS.h"
 #include "littlefs/lfs.h"
+#include <sdkconfig.h>
 
 namespace fs
 {
@@ -28,7 +29,7 @@ struct FSInfo {
     int maxPathLength;
     int pageSize;
 
-    FSInfo(size_t _totalBytes = 0, size_t _usedBytes = 0, int _blockSize = 4096, int _pageSize = 256, int _maxOpenFiles = 10, int _maxPathLength = LFS_NAME_MAX) :
+    FSInfo(size_t _totalBytes = 0, size_t _usedBytes = 0, int _blockSize = 4096, int _pageSize = CONFIG_LITTLEFS_PAGE_SIZE, int _maxOpenFiles = 10/*this is not used in LittleFS.begin()*/, int _maxPathLength = CONFIG_LITTLEFS_OBJ_NAME_LEN) :
         totalBytes(_totalBytes),
         usedBytes(_usedBytes),
         blockSize(_blockSize),
