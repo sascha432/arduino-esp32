@@ -576,30 +576,48 @@ void String::getBytes(unsigned char *buf, unsigned int bufsize, unsigned int ind
 /*  Search                                   */
 /*********************************************/
 
-int String::indexOf(char ch, unsigned int fromIndex) const {
-    if (fromIndex >= len())
+int String::indexOf(char ch, unsigned int fromIndex) const
+{
+    if (fromIndex >= len()) {
         return -1;
+    }
     const char *temp = strchr(buffer() + fromIndex, ch);
-    if (temp == NULL)
+    if (temp == NULL) {
         return -1;
+    }
     return temp - buffer();
 }
 
-String String::substring(unsigned int left, unsigned int right) const {
-    if(left > right) {
+int String::indexOf(const String &s2, unsigned int fromIndex) const
+{
+    if (fromIndex >= len()) {
+        return -1;
+    }
+    const char *found = strstr(buffer() + fromIndex, s2.buffer());
+    if (found == NULL) {
+        return -1;
+    }
+    return found - buffer();
+}
+
+String String::substring(unsigned int left, unsigned int right) const
+{
+    if (left > right) {
         unsigned int temp = right;
         right = left;
         left = temp;
     }
     String out;
-    if(left >= len())
+    if (left >= len()) {
         return out;
-    if(right > len())
+    }
+    if (right > len()) {
         right = len();
-    char temp = buffer()[right];  // save the replaced character
+    }
+    char temp = buffer()[right]; // save the replaced character
     wbuffer()[right] = '\0';
     out = wbuffer() + left;  // pointer arithmetic
-    wbuffer()[right] = temp;  //restore character
+    wbuffer()[right] = temp; //restore character
     return out;
 }
 
