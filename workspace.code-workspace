@@ -22,7 +22,10 @@
 			"xutility": "cpp",
 			"esp_intr_alloc.h": "c",
 			"future": "cpp",
-			"system_error": "cpp"
+			"system_error": "cpp",
+			"memory": "c",
+			"mutex": "c",
+			"shared_mutex": "c"
 		}
 	}
 }

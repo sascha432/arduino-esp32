@@ -419,21 +419,13 @@ uint64_t EspClass::getEfuseMac(void)
     return _chipmacid;
 }
 
-uint8_t *EspClass::random(uint8_t *resultArray, const size_t outputSizeBytes) //TODO replace
+uint8_t *EspClass::random(uint8_t *resultArray, const size_t outputSizeBytes)
 {
-    auto begin = resultArray;
-    auto end = begin + outputSizeBytes;
-    while(begin < end) {
-        *begin++ = random();
-    }
+    esp_fill_random(resultArray, outputSizeBytes);
     return resultArray;
 }
 
-uint32_t EspClass::random() //TODO replace
+uint32_t EspClass::random()
 {
-    static bool init = false;
-    if (!init) {
-        srand(micros());
-    }
-    return rand();
+    return esp_random();
 }
