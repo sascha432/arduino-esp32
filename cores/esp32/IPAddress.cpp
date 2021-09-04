@@ -44,6 +44,26 @@ IPAddress::IPAddress(const uint8_t *address)
     memcpy(_address.bytes, address, sizeof(_address.bytes));
 }
 
+IPAddress::IPAddress(const ip_addr *address)
+{
+    if (address && address->type == lwip_ip_addr_type::IPADDR_TYPE_V4) {
+        _address.dword = address->u_addr.ip4.addr;
+    }
+    else {
+        _address.dword = 0;
+    }
+}
+
+IPAddress::IPAddress(const ip_addr &address)
+{
+    if (address.type == lwip_ip_addr_type::IPADDR_TYPE_V4) {
+        _address.dword = address.u_addr.ip4.addr;
+    }
+    else {
+        _address.dword = 0;
+    }
+}
+
 IPAddress& IPAddress::operator=(const uint8_t *address)
 {
     memcpy(_address.bytes, address, sizeof(_address.bytes));

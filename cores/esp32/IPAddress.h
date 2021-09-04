@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <WString.h>
 #include <Printable.h>
+#include <lwip/ip_addr.h>
 
 // A class to make it easier to handle and pass around IP addresses
 
@@ -49,6 +50,9 @@ public:
     IPAddress(uint8_t first_octet, uint8_t second_octet, uint8_t third_octet, uint8_t fourth_octet);
     IPAddress(uint32_t address);
     IPAddress(const uint8_t *address);
+    IPAddress(const ip_addr *address);
+    IPAddress(const ip_addr &address);
+
     virtual ~IPAddress() {}
 
     bool fromString(const char *address);
