@@ -46,7 +46,7 @@ Now that you know that the module can be different but the heart is the same, yo
 Before buying: Keep in mind that for some "must have" features when choosing the best board for your needs:
 
 - Embedded USB-to-Serial
-    - This is very convenient for programming and monitoring the logs with the terminal via USB. 
+    - This is very convenient for programming and monitoring the logs with the terminal via USB.
 - Breadboard friendly
     - If you are prototyping, this will be very useful to connect your board directly on the breadboard.
 - open-source/open-hardware
@@ -84,17 +84,17 @@ Add here the third party boards, listed by vendors.
 LOLIN
 *****
 
-* `LOLIN D32 <https://www.wemos.cc/en/latest/d32/d32.html>`_
-* `LOLIN D32 Pro <https://www.wemos.cc/en/latest/d32/d32_pro.html>`_
+* |board_lolin_d32|
+* |board_lolin_d32_pro|
 
 Generic Vendor
 **************
-    
+
     .. toctree::
         :maxdepth: 1
-    
+
         Generic Board Name <generic>
-    
+
     .. note::
         Create one file per board or one file with multiple boards. Do not add board information/description on this file.
 
@@ -105,8 +105,16 @@ Resources
 * `ESP32-S2 Datasheet`_ (Datasheet)
 * `ESP32-C3 Datasheet`_ (Datasheet)
 
-.. _Espressif Systems: https://www.espressif.com 
+.. _Espressif Systems: https://www.espressif.com
 .. _Espressif Product Selector: https://products.espressif.com/
 .. _ESP32 Datasheet: https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf
 .. _ESP32-S2 Datasheet: https://www.espressif.com/sites/default/files/documentation/esp32-s2_datasheet_en.pdf
 .. _ESP32-C3 Datasheet: https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf
+
+.. |board_lolin_d32| raw:: html
+
+  <a href="https://www.wemos.cc/en/latest/d32/d32.html" target="_blank">LOLIN D32</a>
+
+.. |board_lolin_d32_pro| raw:: html
+
+  <a href="https://www.wemos.cc/en/latest/d32/d32_pro.html" target="_blank">LOLIN D32 Pro</a>

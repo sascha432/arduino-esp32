@@ -13,13 +13,12 @@
 // limitations under the License.
 #pragma once
 
-#include <inttypes.h>
-
-#include "Stream.h"
-#include "esp32-hal.h"
+#include "sdkconfig.h"
 #if CONFIG_TINYUSB_CDC_ENABLED
 
+#include <inttypes.h>
 #include "esp_event.h"
+#include "Stream.h"
 
 ESP_EVENT_DECLARE_BASE(ARDUINO_USB_CDC_EVENTS);
 
@@ -62,7 +61,7 @@ public:
     size_t setRxBufferSize(size_t);
     void begin(unsigned long baud=0);
     void end();
-    
+
     int available(void);
     int availableForWrite(void);
     int peek(void);
@@ -71,7 +70,7 @@ public:
     size_t write(uint8_t);
     size_t write(const uint8_t *buffer, size_t size);
     void flush(void);
-    
+
     inline size_t read(char * buffer, size_t size)
     {
         return read((uint8_t*) buffer, size);
@@ -115,7 +114,7 @@ public:
     void _onTX(void);
     void _onUnplugged(void);
     xSemaphoreHandle tx_sem;
-    
+
 protected:
     uint8_t  itf;
     uint32_t bit_rate;
@@ -127,7 +126,7 @@ protected:
     bool     connected;
     bool     reboot_enable;
     xQueueHandle rx_queue;
-    
+
 };
 
 #if ARDUINO_USB_CDC_ON_BOOT //Serial used for USB CDC

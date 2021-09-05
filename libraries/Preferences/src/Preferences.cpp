@@ -1,4 +1,4 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2015-2021 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ bool Preferences::begin(const char * name, bool readOnly, const char* partition_
         }
         err = nvs_open_from_partition(partition_label, name, readOnly ? NVS_READONLY : NVS_READWRITE, &_handle);
     } else {
-        err = nvs_open(name, readOnly?NVS_READONLY:NVS_READWRITE, &_handle);
+        err = nvs_open(name, readOnly ? NVS_READONLY : NVS_READWRITE, &_handle);
     }
     if(err){
         log_e("nvs_open failed: %s", nvs_error(err));
@@ -74,6 +74,11 @@ bool Preferences::clear(){
         log_e("nvs_erase_all fail: %s", nvs_error(err));
         return false;
     }
+    err = nvs_commit(_handle);
+    if(err){
+        log_e("nvs_commit fail: %s", nvs_error(err));
+        return false;
+    }
     return true;
 }
 
@@ -88,6 +93,11 @@ bool Preferences::remove(const char * key){
     esp_err_t err = nvs_erase_key(_handle, key);
     if(err){
         log_e("nvs_erase_key fail: %s %s", key, nvs_error(err));
+        return false;
+    }
+    err = nvs_commit(_handle);
+    if(err){
+        log_e("nvs_commit fail: %s %s", key, nvs_error(err));
         return false;
     }
     return true;

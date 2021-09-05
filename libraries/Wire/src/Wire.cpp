@@ -209,19 +209,19 @@ uint8_t TwoWire::requestFrom(uint16_t address, uint8_t size, bool sendStop)
 
     last_error = readTransmission(address, &rxBuffer[cnt], size, sendStop, &cnt);
     rxIndex = 0;
-  
+
     rxLength = cnt;
-  
+
     if( last_error != I2C_ERROR_CONTINUE){ // not a  buffered ReSTART operation
       // so this operation actually moved data, queuing is done.
         rxQueued = 0;
         txQueued = 0; // the SendStop=true will restart all Queueing or error condition
     }
-  
+
     if(last_error != I2C_ERROR_OK){ // ReSTART on read does not return any data
         cnt = 0;
     }
-  
+
     return cnt;
 }
 
@@ -375,7 +375,7 @@ char * TwoWire::getErrorText(uint8_t err)
 
 /*stickbreaker Dump i2c Interrupt buffer, i2c isr Debugging
  */
- 
+
 uint32_t TwoWire::setDebugFlags( uint32_t setBits, uint32_t resetBits){
   return i2cDebug(i2c,setBits,resetBits);
 }

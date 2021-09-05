@@ -11,10 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include "USB.h"
+
+#if CONFIG_TINYUSB_ENABLED
+
 #include "esp32-hal.h"
 #include "esp32-hal-tinyusb.h"
-#include "USB.h"
-#if CONFIG_TINYUSB_ENABLED
+#include "common/tusb_common.h"
 
 #ifndef USB_VID
 #define USB_VID USB_ESPRESSIF_VID
@@ -167,7 +170,7 @@ bool ESPUSB::begin(){
                 .webusb_enabled = webusb_enabled,
                 .webusb_url = webusb_url.c_str()
         };
-        _started = tinyusb_init(&tinyusb_device_config) == ESP_OK; 
+        _started = tinyusb_init(&tinyusb_device_config) == ESP_OK;
     }
     return _started;
 }

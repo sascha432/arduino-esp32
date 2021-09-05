@@ -85,6 +85,10 @@ class String {
             init();
         }
         String(const char *cstr);
+        String(const char *cstr, unsigned int length);
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+        String(const uint8_t *cstr, unsigned int length) : String((const char*)cstr, length) {}
+#endif
         String(const String &str);
         String(const __FlashStringHelper *str);
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -110,13 +114,17 @@ class String {
         // is left unchanged).  reserve(0), if successful, will validate an
         // invalid string (i.e., "if (s)" will be true afterwards)
         bool reserve(unsigned int size);
-        unsigned int length(void) const {
-            return buffer() ? len() : 0;
+        inline unsigned int length(void) const {
+            if(buffer()) {
+                return len();
+            } else {
+                return 0;
+            }
         }
-        void clear(void) {
+        inline void clear(void) {
             setLen(0);
         }
-        bool isEmpty(void) const {
+        inline bool isEmpty(void) const {
             return length() == 0;
         }
 
@@ -138,6 +146,7 @@ class String {
         // concatenation is considered unsuccessful.
         unsigned char concat(const String &str);
         unsigned char concat(const char *cstr);
+        unsigned char concat(const uint8_t *cstr, unsigned int length) {return concat((const char*)cstr, length);}
         unsigned char concat(char c);
         unsigned char concat(unsigned char c);
         unsigned char concat(int num);
