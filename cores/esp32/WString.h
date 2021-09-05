@@ -966,7 +966,9 @@ class String {
         // Accessor functions
         inline bool isSSO() const { return sso.isSSO; }
         inline unsigned int len() const { return isSSO() ? sso.len : ptr.len; }
+    public:
         inline unsigned int capacity() const { return isSSO() ? (unsigned int)SSOSIZE - 1 : ptr.cap; } // Size of max string not including terminal NUL
+    protected:
         inline void setSSO(bool set) { sso.isSSO = set; }
         inline void setLen(int len) {
             if (isSSO()) {
