@@ -132,6 +132,11 @@ void LittleFSFS::info(FSInfo &info)
     info = FSInfo(total, used, 4096, CONFIG_LITTLEFS_PAGE_SIZE);
 }
 
+const char *LittleFSFS::mountpoint()
+{
+    return _impl->mountpoint();
+}
+
 size_t LittleFSFS::totalBytes()
 {
     size_t total,used;

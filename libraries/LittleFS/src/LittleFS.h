@@ -51,6 +51,7 @@ public:
     void end();
 
     void info(FSInfo &info);
+    const char *mountpoint();
 
 private:
     char * partitionLabel_;

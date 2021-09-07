@@ -25,7 +25,8 @@
 			"system_error": "cpp",
 			"memory": "c",
 			"mutex": "c",
-			"shared_mutex": "c"
+			"shared_mutex": "c",
+			"xlocmes": "cpp"
 		}
 	}
 }
