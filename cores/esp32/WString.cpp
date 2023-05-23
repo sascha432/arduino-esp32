@@ -648,6 +648,18 @@ void String::remove(unsigned int index, unsigned int count) {
     wbuffer()[newlen] = 0;
 }
 
+bool String::replace(char find, char replace)
+{
+    if (!buffer())
+        return true;
+    for (char *p = wbuffer(); *p; p++) {
+        if (*p == find) {
+            *p = replace;
+        }
+    }
+    return true;
+}
+
 bool String::_replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
 {
     if (length() == 0 || findLen == 0 || !find) {
