@@ -40,7 +40,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pgmspace.h>
-#include "KFCBaseLibrary/include/misc_wstring.h"
+#include "misc_wstring.h"
 #endif
 // #include <stdlib.h>
 // #include <string.h>
