@@ -1,16 +1,8 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef _SOC_SDMMC_STRUCT_H_
 #define _SOC_SDMMC_STRUCT_H_
 
@@ -23,18 +15,22 @@ extern "C" {
 #endif
 
 typedef struct sdmmc_desc_s {
-    uint32_t reserved1: 1;
-    uint32_t disable_int_on_completion: 1;
-    uint32_t last_descriptor: 1;
-    uint32_t first_descriptor: 1;
-    uint32_t second_address_chained: 1;
-    uint32_t end_of_ring: 1;
-    uint32_t reserved2: 24;
-    uint32_t card_error_summary: 1;
-    uint32_t owned_by_idmac: 1;
-    uint32_t buffer1_size: 13;
-    uint32_t buffer2_size: 13;
-    uint32_t reserved3: 6;
+    struct {
+        uint32_t reserved1: 1;
+        uint32_t disable_int_on_completion: 1;
+        uint32_t last_descriptor: 1;
+        uint32_t first_descriptor: 1;
+        uint32_t second_address_chained: 1;
+        uint32_t end_of_ring: 1;
+        uint32_t reserved2: 24;
+        uint32_t card_error_summary: 1;
+        uint32_t owned_by_idmac: 1;
+    };
+    struct {
+        uint32_t buffer1_size: 13;
+        uint32_t buffer2_size: 13;
+        uint32_t reserved3: 6;
+    };
     void* buffer1_ptr;
     union {
         void* buffer2_ptr;
@@ -44,7 +40,9 @@ typedef struct sdmmc_desc_s {
 
 #define SDMMC_DMA_MAX_BUF_LEN 4096
 
+#ifndef __cplusplus
 _Static_assert(sizeof(sdmmc_desc_t) == 16, "invalid size of sdmmc_desc_t structure");
+#endif
 
 
 typedef struct sdmmc_hw_cmd_s {
@@ -73,7 +71,9 @@ typedef struct sdmmc_hw_cmd_s {
     uint32_t start_command: 1;      ///< Start command; once command is sent to the card, bit is cleared.
 } sdmmc_hw_cmd_t;  ///< command format used in cmd register; this structure is defined to make it easier to build command values
 
+#ifndef __cplusplus
 _Static_assert(sizeof(sdmmc_hw_cmd_t) == 4, "invalid size of sdmmc_cmd_t structure");
+#endif
 
 
 typedef volatile struct sdmmc_dev_s {
@@ -146,8 +146,10 @@ typedef volatile struct sdmmc_dev_s {
         uint32_t val;
     } ctype;
 
-    uint32_t blksiz: 16;        ///< block size, default 0x200
-    uint32_t : 16;
+    struct {
+        uint32_t blksiz: 16;        ///< block size, default 0x200
+        uint32_t reserved: 16;
+    };
 
     uint32_t bytcnt;            ///< number of bytes to be transferred
 
@@ -326,6 +328,7 @@ typedef volatile struct sdmmc_dev_s {
             uint32_t ces: 1;        ///< card error summary
             uint32_t reserved2: 2;
             uint32_t nis: 1;        ///< normal interrupt summary
+            uint32_t ais: 1;        ///< abnormal interrupt summary
             uint32_t fbe_code: 3;   ///< code of fatal bus error
             uint32_t fsm: 4;        ///< DMAC FSM state
             uint32_t reserved3: 15;
@@ -362,6 +365,7 @@ typedef volatile struct sdmmc_dev_s {
             uint32_t write_thr_en : 1;      ///< equivalent of read_thr_en for writes
             uint32_t reserved1 : 13;
             uint32_t card_threshold : 12;   ///< threshold value for reads/writes, in bytes
+            uint32_t reserved28: 4;
         };
         uint32_t val;
     } cardthrctl;
@@ -378,13 +382,16 @@ typedef volatile struct sdmmc_dev_s {
             uint32_t div_factor_p: 4;       ///< controls clock period; it will be (div_factor_p + 1) / 160MHz
             uint32_t div_factor_h: 4;       ///< controls length of high pulse; it will be (div_factor_h + 1) / 160MHz
             uint32_t div_factor_m: 4;       ///< should be equal to div_factor_p
+            uint32_t reserved21: 11;
         };
         uint32_t val;
     } clock;
 } sdmmc_dev_t;
 extern sdmmc_dev_t SDMMC;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(sdmmc_dev_t) == 0x804, "invalid size of sdmmc_dev_t structure");
+#endif
 
 #ifdef __cplusplus
 }

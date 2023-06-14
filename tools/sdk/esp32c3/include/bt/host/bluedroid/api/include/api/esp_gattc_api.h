@@ -220,6 +220,7 @@ typedef union {
     struct gattc_disconnect_evt_param {
         esp_gatt_conn_reason_t reason;  /*!< disconnection reason */
         uint16_t conn_id;               /*!< Connection id */
+        uint8_t link_role;              /*!< Link role : master role = 0  ; slave role = 1*/
         esp_bd_addr_t remote_bda;       /*!< Remote bluetooth device address */
     } disconnect;                       /*!< Gatt client callback param of ESP_GATTC_DISCONNECT_EVT */
     /**
@@ -380,7 +381,7 @@ esp_err_t esp_ble_gattc_search_service(esp_gatt_if_t gattc_if, uint16_t conn_id,
 /**
  * @brief           Find all the service with the given service uuid in the gattc cache, if the svc_uuid is NULL, find all the service.
  *                  Note: It just get service from local cache, won't get from remote devices. If want to get it from remote device, need
- *                  to used the esp_ble_gattc_search_service.
+ *                  to used the esp_ble_gattc_cache_refresh, then call esp_ble_gattc_get_service again.
  *
  * @param[in]       gattc_if: Gatt client access interface.
  * @param[in]       conn_id: connection ID which identify the server.

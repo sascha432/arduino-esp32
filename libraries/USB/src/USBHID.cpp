@@ -42,7 +42,9 @@ static bool tinyusb_hid_is_initialized = false;
 static uint8_t tinyusb_loaded_hid_devices_num = 0;
 static uint16_t tinyusb_hid_device_descriptor_len = 0;
 static uint8_t * tinyusb_hid_device_descriptor = NULL;
-static const char * tinyusb_hid_device_report_types[4] = {"INVALID", "INPUT", "OUTPUT", "FEATURE"};
+#if ARDUHAL_LOG_LEVEL >= ARDUHAL_LOG_LEVEL_DEBUG
+    static const char * tinyusb_hid_device_report_types[4] = {"INVALID", "INPUT", "OUTPUT", "FEATURE"};
+#endif
 
 static bool tinyusb_enable_hid_device(uint16_t descriptor_len, USBHIDDevice * device){
     if(tinyusb_hid_is_initialized){
@@ -230,7 +232,7 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance){
 // protocol is either HID_PROTOCOL_BOOT (0) or HID_PROTOCOL_REPORT (1)
 void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol){
     log_v("instance: %u, protocol:%u", instance, protocol);
-    arduino_usb_hid_event_data_t p = {0};
+    arduino_usb_hid_event_data_t p;
     p.instance = instance;
     p.set_protocol.protocol = protocol;
     arduino_usb_event_post(ARDUINO_USB_HID_EVENTS, ARDUINO_USB_HID_SET_PROTOCOL_EVENT, &p, sizeof(arduino_usb_hid_event_data_t), portMAX_DELAY);
@@ -241,7 +243,7 @@ void tud_hid_set_protocol_cb(uint8_t instance, uint8_t protocol){
 // - Idle Rate > 0 : skip duplication, but send at least 1 report every idle rate (in unit of 4 ms).
 bool tud_hid_set_idle_cb(uint8_t instance, uint8_t idle_rate){
     log_v("instance: %u, idle_rate:%u", instance, idle_rate);
-    arduino_usb_hid_event_data_t p = {0};
+    arduino_usb_hid_event_data_t p;
     p.instance = instance;
     p.set_idle.idle_rate = idle_rate;
     arduino_usb_event_post(ARDUINO_USB_HID_EVENTS, ARDUINO_USB_HID_SET_IDLE_EVENT, &p, sizeof(arduino_usb_hid_event_data_t), portMAX_DELAY);
@@ -308,7 +310,21 @@ bool USBHID::ready(void){
     return tud_hid_n_ready(0);
 }
 
-void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t len){
+// TinyUSB is in the process of changing the type of the last argument to
+// tud_hid_report_complete_cb(), so extract the type from the version of TinyUSB that we're
+// compiled with.
+template <class F> struct ArgType;
+
+template <class R, class T1, class T2, class T3>
+struct ArgType<R(*)(T1, T2, T3)> {
+	typedef T1 type1;
+	typedef T2 type2;
+	typedef T3 type3;
+};
+
+typedef ArgType<decltype(&tud_hid_report_complete_cb)>::type3 tud_hid_report_complete_cb_len_t;
+
+void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, tud_hid_report_complete_cb_len_t len){
     if (tinyusb_hid_device_input_sem) {
         xSemaphoreGive(tinyusb_hid_device_input_sem);
     }
@@ -329,11 +345,16 @@ bool USBHID::SendReport(uint8_t id, const void* data, size_t len, uint32_t timeo
     if(!res){
         log_e("not ready");
     } else {
+        // The semaphore may be given if the last SendReport() timed out waiting for the report to
+        // be sent. Or, tud_hid_report_complete_cb() may be called an extra time, causing the
+        // semaphore to be given. In these cases, take the semaphore to clear its state so that
+        // we can wait for it to be given after calling tud_hid_n_report().
+        xSemaphoreTake(tinyusb_hid_device_input_sem, 0);
+
         res = tud_hid_n_report(0, id, data, len);
         if(!res){
             log_e("report %u failed", id);
         } else {
-            xSemaphoreTake(tinyusb_hid_device_input_sem, 0);
             if(xSemaphoreTake(tinyusb_hid_device_input_sem, timeout_ms / portTICK_PERIOD_MS) != pdTRUE){
                 log_e("report %u wait failed", id);
                 res = false;

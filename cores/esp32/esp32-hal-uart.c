@@ -22,6 +22,11 @@
 #include "hal/uart_ll.h"
 #include "soc/soc_caps.h"
 #include "soc/uart_struct.h"
+#include "soc/uart_periph.h"
+
+#include "driver/gpio.h"
+#include "hal/gpio_hal.h"
+#include "esp_rom_gpio.h"
 
 static int s_uart_debug_nr = 0;
 
@@ -34,7 +39,7 @@ struct uart_struct_t {
     uint8_t num;
     bool has_peek;
     uint8_t peek_byte;
-
+    QueueHandle_t uart_event_queue;   // export it by some uartGetEventQueue() function
 };
 
 #if CONFIG_DISABLE_HAL_LOCKS
@@ -43,12 +48,12 @@ struct uart_struct_t {
 #define UART_MUTEX_UNLOCK()
 
 static uart_t _uart_bus_array[] = {
-    {0, false, 0},
+    {0, false, 0, NULL},
 #if SOC_UART_NUM > 1
-    {1, false, 0},
+    {1, false, 0, NULL},
 #endif
 #if SOC_UART_NUM > 2
-    {2, false, 0},
+    {2, false, 0, NULL},
 #endif
 };
 
@@ -58,21 +63,80 @@ static uart_t _uart_bus_array[] = {
 #define UART_MUTEX_UNLOCK()  xSemaphoreGive(uart->lock)
 
 static uart_t _uart_bus_array[] = {
-    {NULL, 0, false, 0},
+    {NULL, 0, false, 0, NULL},
 #if SOC_UART_NUM > 1
-    {NULL, 1, false, 0},
+    {NULL, 1, false, 0, NULL},
 #endif
 #if SOC_UART_NUM > 2
-    {NULL, 2, false, 0},
+    {NULL, 2, false, 0, NULL},
 #endif
 };
 
 #endif
 
-bool uartIsDriverInstalled(uart_t* uart)
+// IDF UART has no detach function. As consequence, after ending a UART, the previous pins continue
+// to work as RX/TX. It can be verified by changing the UART pins and writing to the UART. Output can 
+// be seen in the previous pins and new pins as well. 
+// Valid pin UART_PIN_NO_CHANGE is defined to (-1)
+// Negative Pin Number will keep it unmodified, thus this function can detach individual pins
+void uartDetachPins(uart_t* uart, int8_t rxPin, int8_t txPin, int8_t ctsPin, int8_t rtsPin)
 {
     if(uart == NULL) {
-        return 0;
+        return;
+    }
+
+    UART_MUTEX_LOCK();
+    if (txPin >= 0) {
+        gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[txPin], PIN_FUNC_GPIO);
+        esp_rom_gpio_connect_out_signal(txPin, SIG_GPIO_OUT_IDX, false, false);
+    }
+
+    if (rxPin >= 0) {
+        gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[rxPin], PIN_FUNC_GPIO);
+        esp_rom_gpio_connect_in_signal(GPIO_FUNC_IN_LOW, UART_PERIPH_SIGNAL(uart->num, SOC_UART_RX_PIN_IDX), false);
+    }
+
+    if (rtsPin >= 0) {
+        gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[rtsPin], PIN_FUNC_GPIO);
+        esp_rom_gpio_connect_out_signal(rtsPin, SIG_GPIO_OUT_IDX, false, false);
+    }
+
+    if (ctsPin >= 0) {
+        gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[ctsPin], PIN_FUNC_GPIO);
+        esp_rom_gpio_connect_in_signal(GPIO_FUNC_IN_LOW, UART_PERIPH_SIGNAL(uart->num, SOC_UART_CTS_PIN_IDX), false);
+    }
+    UART_MUTEX_UNLOCK();  
+}
+
+// solves issue https://github.com/espressif/arduino-esp32/issues/6032
+// baudrate must be multiplied when CPU Frequency is lower than APB 80MHz
+uint32_t _get_effective_baudrate(uint32_t baudrate) 
+{
+    uint32_t Freq = getApbFrequency()/1000000;
+    if (Freq < 80) {
+        return 80 / Freq * baudrate;
+     }
+    else {
+        return baudrate;
+    }
+}
+
+// Routines that take care of UART events will be in the HardwareSerial Class code
+void uartGetEventQueue(uart_t* uart, QueueHandle_t *q)
+{
+    // passing back NULL for the Queue pointer when UART is not initialized yet
+    *q = NULL;
+    if(uart == NULL) {
+        return;
+    }
+    *q = uart->uart_event_queue;
+    return;
+}
+
+bool uartIsDriverInstalled(uart_t* uart) 
+{
+    if(uart == NULL) {
+        return false;
     }
 
     if (uart_is_driver_installed(uart->num)) {
@@ -81,25 +145,37 @@ bool uartIsDriverInstalled(uart_t* uart)
     return false;
 }
 
-void uartSetPins(uart_t* uart, uint8_t rxPin, uint8_t txPin)
+// Valid pin UART_PIN_NO_CHANGE is defined to (-1)
+// Negative Pin Number will keep it unmodified, thus this function can set individual pins
+bool uartSetPins(uart_t* uart, int8_t rxPin, int8_t txPin, int8_t ctsPin, int8_t rtsPin)
 {
-    if(uart == NULL || rxPin >= SOC_GPIO_PIN_COUNT || txPin >= SOC_GPIO_PIN_COUNT) {
-        return;
+    if(uart == NULL) {
+        return false;
     }
     UART_MUTEX_LOCK();
-    ESP_ERROR_CHECK(uart_set_pin(uart->num, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-    UART_MUTEX_UNLOCK();
+    // IDF uart_set_pin() will issue necessary Error Message and take care of all GPIO Number validation.
+    bool retCode = uart_set_pin(uart->num, txPin, rxPin, rtsPin, ctsPin) == ESP_OK; 
+    UART_MUTEX_UNLOCK();  
+    return retCode;
+}
 
+// 
+bool uartSetHwFlowCtrlMode(uart_t *uart, uint8_t mode, uint8_t threshold) {
+    if(uart == NULL) {
+        return false;
+    }
+    // IDF will issue corresponding error message when mode or threshold are wrong and prevent crashing
+    // IDF will check (mode > HW_FLOWCTRL_CTS_RTS || threshold >= SOC_UART_FIFO_LEN)
+    UART_MUTEX_LOCK();
+    bool retCode = (ESP_OK == uart_set_hw_flow_ctrl(uart->num, (uart_hw_flowcontrol_t) mode, threshold));
+    UART_MUTEX_UNLOCK();  
+    return retCode;
 }
 
 
-uart_t* uartBegin(uint8_t uart_nr, uint32_t baudrate, uint32_t config, int8_t rxPin, int8_t txPin, uint16_t queueLen, bool inverted, uint8_t rxfifo_full_thrhd)
+uart_t* uartBegin(uint8_t uart_nr, uint32_t baudrate, uint32_t config, int8_t rxPin, int8_t txPin, uint16_t rx_buffer_size, uint16_t tx_buffer_size, bool inverted, uint8_t rxfifo_full_thrhd)
 {
     if(uart_nr >= SOC_UART_NUM) {
-        return NULL;
-    }
-
-    if(rxPin == -1 && txPin == -1) {
         return NULL;
     }
 
@@ -121,29 +197,78 @@ uart_t* uartBegin(uint8_t uart_nr, uint32_t baudrate, uint32_t config, int8_t rx
     UART_MUTEX_LOCK();
 
     uart_config_t uart_config;
-    uart_config.baud_rate = baudrate;
     uart_config.data_bits = (config & 0xc) >> 2;
     uart_config.parity = (config & 0x3);
     uart_config.stop_bits = (config & 0x30) >> 4;
     uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     uart_config.rx_flow_ctrl_thresh = rxfifo_full_thrhd;
-    uart_config.source_clk = UART_SCLK_APB;
-
-
-    ESP_ERROR_CHECK(uart_driver_install(uart_nr, 2*queueLen, 0, 0, NULL, 0));
+#if SOC_UART_SUPPORT_XTAL_CLK
+    // works independently of APB frequency
+    uart_config.source_clk = UART_SCLK_XTAL; // ESP32C3, ESP32S3
+    uart_config.baud_rate = baudrate;
+#else
+    uart_config.source_clk = UART_SCLK_APB;  // ESP32, ESP32S2
+    uart_config.baud_rate = _get_effective_baudrate(baudrate);
+#endif
+    ESP_ERROR_CHECK(uart_driver_install(uart_nr, rx_buffer_size, tx_buffer_size, 20, &(uart->uart_event_queue), 0));
     ESP_ERROR_CHECK(uart_param_config(uart_nr, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(uart_nr, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
-    // Is it right or the idea is to swap rx and tx pins?
+    // Is it right or the idea is to swap rx and tx pins? 
     if (inverted) {
         // invert signal for both Rx and Tx
-        ESP_ERROR_CHECK(uart_set_line_inverse(uart_nr, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV));
+        ESP_ERROR_CHECK(uart_set_line_inverse(uart_nr, UART_SIGNAL_TXD_INV | UART_SIGNAL_RXD_INV));    
     }
-
+    
     UART_MUTEX_UNLOCK();
 
     uartFlush(uart);
     return uart;
+}
+
+// This function code is under testing - for now just keep it here
+void uartSetFastReading(uart_t* uart)
+{
+    if(uart == NULL) {
+        return;
+    }
+
+    UART_MUTEX_LOCK();
+    // override default RX IDF Driver Interrupt - no BREAK, PARITY or OVERFLOW
+    uart_intr_config_t uart_intr = {
+        .intr_enable_mask = UART_INTR_RXFIFO_FULL | UART_INTR_RXFIFO_TOUT,   // only these IRQs - no BREAK, PARITY or OVERFLOW
+        .rx_timeout_thresh = 1,
+        .txfifo_empty_intr_thresh = 10,
+        .rxfifo_full_thresh = 2,
+    };
+
+    ESP_ERROR_CHECK(uart_intr_config(uart->num, &uart_intr));
+    UART_MUTEX_UNLOCK();
+}
+
+
+bool uartSetRxTimeout(uart_t* uart, uint8_t numSymbTimeout)
+{
+    if(uart == NULL) {
+        return false;
+    }
+
+    UART_MUTEX_LOCK();
+    bool retCode = (ESP_OK == uart_set_rx_timeout(uart->num, numSymbTimeout));
+    UART_MUTEX_UNLOCK();
+    return retCode;
+}
+
+bool uartSetRxFIFOFull(uart_t* uart, uint8_t numBytesFIFOFull)
+{
+    if(uart == NULL) {
+        return false;
+    }
+
+    UART_MUTEX_LOCK();
+    bool retCode = (ESP_OK == uart_set_rx_full_threshold(uart->num, numBytesFIFOFull));
+    UART_MUTEX_UNLOCK();
+    return retCode;
 }
 
 void uartEnd(uart_t* uart)
@@ -151,7 +276,7 @@ void uartEnd(uart_t* uart)
     if(uart == NULL) {
         return;
     }
-
+   
     UART_MUTEX_LOCK();
     uart_driver_delete(uart->num);
     UART_MUTEX_UNLOCK();
@@ -163,13 +288,13 @@ void uartSetRxInvert(uart_t* uart, bool invert)
     if (uart == NULL)
         return;
 #if 0
-    // POTENTIAL ISSUE :: original code only set/reset rxd_inv bit
+    // POTENTIAL ISSUE :: original code only set/reset rxd_inv bit 
     // IDF or LL set/reset the whole inv_mask!
     if (invert)
         ESP_ERROR_CHECK(uart_set_line_inverse(uart->num, UART_SIGNAL_RXD_INV));
     else
         ESP_ERROR_CHECK(uart_set_line_inverse(uart->num, UART_SIGNAL_INV_DISABLE));
-
+    
 #else
     // this implementation is better over IDF API because it only affects RXD
     // this is supported in ESP32, ESP32-S2 and ESP32-C3
@@ -178,7 +303,7 @@ void uartSetRxInvert(uart_t* uart, bool invert)
         hw->conf0.rxd_inv = 1;
     else
         hw->conf0.rxd_inv = 0;
-#endif
+#endif 
 }
 
 
@@ -204,12 +329,45 @@ uint32_t uartAvailableForWrite(uart_t* uart)
         return 0;
     }
     UART_MUTEX_LOCK();
-    uint32_t available =  uart_ll_get_txfifo_len(UART_LL_GET_HW(uart->num));
+    uint32_t available =  uart_ll_get_txfifo_len(UART_LL_GET_HW(uart->num));  
+    size_t txRingBufferAvailable = 0;
+    if (ESP_OK == uart_get_tx_buffer_free_size(uart->num, &txRingBufferAvailable)) {
+        available += txRingBufferAvailable; 
+    }
     UART_MUTEX_UNLOCK();
     return available;
 }
 
+size_t uartReadBytes(uart_t* uart, uint8_t *buffer, size_t size, uint32_t timeout_ms)
+{
+    if(uart == NULL || size == 0 || buffer == NULL) {
+        return 0;
+    }
 
+    size_t bytes_read = 0;
+
+    UART_MUTEX_LOCK();
+
+    if (uart->has_peek) {
+        uart->has_peek = false;
+        *buffer++ = uart->peek_byte;
+        size--;
+        bytes_read = 1;
+    }
+
+    if (size > 0) {
+       int len = uart_read_bytes(uart->num, buffer, size, pdMS_TO_TICKS(timeout_ms));
+       if (len < 0) len = 0;  // error reading UART
+       bytes_read += len;
+    }
+
+        
+    UART_MUTEX_UNLOCK();
+    return bytes_read;
+}
+
+// DEPRICATED but the original code will be kepts here as future reference when a final solution
+// to the UART driver is defined in the use case of reading byte by byte from UART.
 uint8_t uartRead(uart_t* uart)
 {
     if(uart == NULL) {
@@ -225,13 +383,14 @@ uint8_t uartRead(uart_t* uart)
     } else {
 
         int len = uart_read_bytes(uart->num, &c, 1, 20 / portTICK_RATE_MS);
-        if (len == 0) {
+        if (len <= 0) { // includes negative return from IDF in case of error
             c  = 0;
         }
     }
     UART_MUTEX_UNLOCK();
     return c;
 }
+
 
 uint8_t uartPeek(uart_t* uart)
 {
@@ -246,7 +405,7 @@ uint8_t uartPeek(uart_t* uart)
       c = uart->peek_byte;
     } else {
         int len = uart_read_bytes(uart->num, &c, 1, 20 / portTICK_RATE_MS);
-        if (len == 0) {
+        if (len <= 0) { // includes negative return from IDF in case of error
             c  = 0;
         } else {
             uart->has_peek = true;
@@ -269,7 +428,7 @@ void uartWrite(uart_t* uart, uint8_t c)
 
 void uartWriteBuf(uart_t* uart, const uint8_t * data, size_t len)
 {
-    if(uart == NULL) {
+    if(uart == NULL || data == NULL || !len) {
         return;
     }
 
@@ -288,9 +447,9 @@ void uartFlushTxOnly(uart_t* uart, bool txOnly)
     if(uart == NULL) {
         return;
     }
-
+    
     UART_MUTEX_LOCK();
-    ESP_ERROR_CHECK(uart_wait_tx_done(uart->num, portMAX_DELAY));
+    while(!uart_ll_is_tx_idle(UART_LL_GET_HW(uart->num)));
 
     if ( !txOnly ) {
         ESP_ERROR_CHECK(uart_flush_input(uart->num));
@@ -304,7 +463,7 @@ void uartSetBaudRate(uart_t* uart, uint32_t baud_rate)
         return;
     }
     UART_MUTEX_LOCK();
-    uart_ll_set_baudrate(UART_LL_GET_HW(uart->num), baud_rate);
+    uart_ll_set_baudrate(UART_LL_GET_HW(uart->num), _get_effective_baudrate(baud_rate));
     UART_MUTEX_UNLOCK();
 }
 
@@ -364,17 +523,28 @@ void uart_install_putc()
     }
 }
 
+// Routines that take care of UART mode in the HardwareSerial Class code
+// used to set UART_MODE_RS485_HALF_DUPLEX auto RTS for TXD for ESP32 chips
+bool uartSetMode(uart_t *uart, uint8_t mode)
+{
+    if (uart == NULL || uart->num >= SOC_UART_NUM)
+    {
+        return false;
+    }
+    
+    UART_MUTEX_LOCK();
+    bool retCode = (ESP_OK == uart_set_mode(uart->num, mode));
+    UART_MUTEX_UNLOCK();
+    return retCode;
+}
+
 void uartSetDebug(uart_t* uart)
 {
     if(uart == NULL || uart->num >= SOC_UART_NUM) {
         s_uart_debug_nr = -1;
-        //ets_install_putc1(NULL);
-        //return;
-    } else
-    if(s_uart_debug_nr == uart->num) {
-        return;
-    } else
-    s_uart_debug_nr = uart->num;
+    } else {
+        s_uart_debug_nr = uart->num;
+    }
     uart_install_putc();
 }
 
@@ -383,16 +553,14 @@ int uartGetDebug()
     return s_uart_debug_nr;
 }
 
-int log_printf(const char *format, ...)
+int log_printfv(const char *format, va_list arg)
 {
     static char loc_buf[64];
     char * temp = loc_buf;
-    int len;
-    va_list arg;
+    uint32_t len;
     va_list copy;
-    va_start(arg, format);
     va_copy(copy, arg);
-    len = vsnprintf(NULL, 0, format, arg);
+    len = vsnprintf(NULL, 0, format, copy);
     va_end(copy);
     if(len >= sizeof(loc_buf)){
         temp = (char*)malloc(len+1);
@@ -405,7 +573,7 @@ int log_printf(const char *format, ...)
         xSemaphoreTake(_uart_bus_array[s_uart_debug_nr].lock, portMAX_DELAY);
     }
 #endif
-
+    
     vsnprintf(temp, len+1, format, arg);
     ets_printf("%s", temp);
 
@@ -414,12 +582,22 @@ int log_printf(const char *format, ...)
         xSemaphoreGive(_uart_bus_array[s_uart_debug_nr].lock);
     }
 #endif
-    va_end(arg);
     if(len >= sizeof(loc_buf)){
         free(temp);
     }
     return len;
 }
+
+int log_printf(const char *format, ...)
+{
+    int len;
+    va_list arg;
+    va_start(arg, format);
+    len = log_printfv(format, arg);
+    va_end(arg);
+    return len;
+}
+
 
 static void log_print_buf_line(const uint8_t *b, size_t len, size_t total_len){
     for(size_t i = 0; i<len; i++){
@@ -452,11 +630,13 @@ void log_print_buf(const uint8_t *b, size_t len){
 }
 
 /*
- * if enough pulses are detected return the minimum high pulse duration + minimum low pulse duration divided by two.
+ * if enough pulses are detected return the minimum high pulse duration + minimum low pulse duration divided by two. 
  * This equals one bit period. If flag is true the function return inmediately, otherwise it waits for enough pulses.
  */
 unsigned long uartBaudrateDetect(uart_t *uart, bool flg)
 {
+// Baud rate detection only works for ESP32 and ESP32S2
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
     if(uart == NULL) {
         return 0;
     }
@@ -474,41 +654,43 @@ unsigned long uartBaudrateDetect(uart_t *uart, bool flg)
     UART_MUTEX_UNLOCK();
 
     return ret;
+#else
+    return 0;
+#endif
 }
 
+
 /*
- * To start detection of baud rate with the uart the auto_baud.en bit needs to be cleared and set. The bit period is
- * detected calling uartBadrateDetect(). The raw baudrate is computed using the UART_CLK_FREQ. The raw baudrate is
+ * To start detection of baud rate with the uart the auto_baud.en bit needs to be cleared and set. The bit period is 
+ * detected calling uartBadrateDetect(). The raw baudrate is computed using the UART_CLK_FREQ. The raw baudrate is 
  * rounded to the closed real baudrate.
- *
+ * 
  * ESP32-C3 reports wrong baud rate detection as shown below:
- *
+ * 
  * This will help in a future recall for the C3.
  * Baud Sent:          Baud Read:
  *  300        -->       19536
  * 2400        -->       19536
- * 4800        -->       19536
- * 9600        -->       28818
+ * 4800        -->       19536 
+ * 9600        -->       28818 
  * 19200       -->       57678
  * 38400       -->       115440
  * 57600       -->       173535
  * 115200      -->       347826
  * 230400      -->       701754
- *
- *
+ * 
+ * 
 */
 void uartStartDetectBaudrate(uart_t *uart) {
     if(uart == NULL) {
         return;
     }
 
-    uart_dev_t *hw = UART_LL_GET_HW(uart->num);
-
 #ifdef CONFIG_IDF_TARGET_ESP32C3
-
+    
     // ESP32-C3 requires further testing
-    // Baud rate detection returns wrong values
-
+    // Baud rate detection returns wrong values 
+   
     log_e("ESP32-C3 baud rate detection is not supported.");
     return;
 
@@ -517,14 +699,17 @@ void uartStartDetectBaudrate(uart_t *uart) {
     //hw->rx_filt.glitch_filt_en = 1;
     //hw->conf0.autobaud_en = 0;
     //hw->conf0.autobaud_en = 1;
-
+#elif CONFIG_IDF_TARGET_ESP32S3
+    log_e("ESP32-S3 baud rate detection is not supported.");
+    return;
 #else
+    uart_dev_t *hw = UART_LL_GET_HW(uart->num);
     hw->auto_baud.glitch_filt = 0x08;
     hw->auto_baud.en = 0;
     hw->auto_baud.en = 1;
 #endif
 }
-
+ 
 unsigned long
 uartDetectBaudrate(uart_t *uart)
 {
@@ -532,10 +717,10 @@ uartDetectBaudrate(uart_t *uart)
         return 0;
     }
 
-#ifndef CONFIG_IDF_TARGET_ESP32C3    // ESP32-C3 requires further testing - Baud rate detection returns wrong values
+// Baud rate detection only works for ESP32 and ESP32S2
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
 
     static bool uartStateDetectingBaudrate = false;
-    uart_dev_t *hw = UART_LL_GET_HW(uart->num);
 
     if(!uartStateDetectingBaudrate) {
         uartStartDetectBaudrate(uart);
@@ -546,20 +731,14 @@ uartDetectBaudrate(uart_t *uart)
     if (!divisor) {
         return 0;
     }
-    //  log_i(...) below has been used to check C3 baud rate detection results
-    //log_i("Divisor = %d\n", divisor);
-    //log_i("BAUD RATE based on Positive Pulse %d\n", getApbFrequency()/((hw->pospulse.min_cnt + 1)/2));
-    //log_i("BAUD RATE based on Negative Pulse %d\n", getApbFrequency()/((hw->negpulse.min_cnt + 1)/2));
 
-
-#ifdef CONFIG_IDF_TARGET_ESP32C3
-    //hw->conf0.autobaud_en = 0;
-#else
+    uart_dev_t *hw = UART_LL_GET_HW(uart->num);
     hw->auto_baud.en = 0;
-#endif
+
     uartStateDetectingBaudrate = false; // Initialize for the next round
 
     unsigned long baudrate = getApbFrequency() / divisor;
+    
     //log_i("APB_FREQ = %d\nraw baudrate detected = %d", getApbFrequency(), baudrate);
 
     static const unsigned long default_rates[] = {300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400, 256000, 460800, 921600, 1843200, 3686400};
@@ -578,7 +757,62 @@ uartDetectBaudrate(uart_t *uart)
 
     return default_rates[i];
 #else
+#ifdef CONFIG_IDF_TARGET_ESP32C3 
     log_e("ESP32-C3 baud rate detection is not supported.");
+#else
+    log_e("ESP32-S3 baud rate detection is not supported.");
+#endif
     return 0;
 #endif
+}
+
+/*
+    These functions are for testing puspose only and can be used in Arduino Sketches
+    Those are used in the UART examples
+*/
+
+/*
+    This is intended to make an internal loopback connection using IOMUX
+    The function uart_internal_loopback() shall be used right after Arduino Serial.begin(...)
+    This code "replaces" the physical wiring for connecting TX <--> RX in a loopback
+*/
+
+// gets the right TX SIGNAL, based on the UART number
+#if SOC_UART_NUM > 2
+#define UART_TX_SIGNAL(uartNumber) (uartNumber == UART_NUM_0 ? U0TXD_OUT_IDX : (uartNumber == UART_NUM_1 ? U1TXD_OUT_IDX : U2TXD_OUT_IDX))
+#else
+#define UART_TX_SIGNAL(uartNumber) (uartNumber == UART_NUM_0 ? U0TXD_OUT_IDX : U1TXD_OUT_IDX)
+#endif
+/*
+   Make sure UART's RX signal is connected to TX pin
+   This creates a loop that lets us receive anything we send on the UART
+*/
+void uart_internal_loopback(uint8_t uartNum, int8_t rxPin)
+{
+  if (uartNum > SOC_UART_NUM - 1 || !GPIO_IS_VALID_GPIO(rxPin)) return;
+  esp_rom_gpio_connect_out_signal(rxPin, UART_TX_SIGNAL(uartNum), false, false);
+}
+
+/*
+    This is intended to generate BREAK in an UART line
+*/
+
+// Forces a BREAK in the line based on SERIAL_8N1 configuration at any baud rate
+void uart_send_break(uint8_t uartNum)
+{
+  uint32_t currentBaudrate = 0;
+  uart_get_baudrate(uartNum, &currentBaudrate);
+  // calculates 10 bits of breaks in microseconds for baudrates up to 500mbps
+  // This is very sensetive timing... it works fine for SERIAL_8N1
+  uint32_t breakTime = (uint32_t) (10.0 * (1000000.0 / currentBaudrate));
+  uart_set_line_inverse(uartNum, UART_SIGNAL_TXD_INV);
+  ets_delay_us(breakTime);
+  uart_set_line_inverse(uartNum, UART_SIGNAL_INV_DISABLE);
+}
+
+// Sends a buffer and at the end of the stream, it generates BREAK in the line
+int uart_send_msg_with_break(uint8_t uartNum, uint8_t *msg, size_t msgSize)
+{
+  // 12 bits long BREAK for 8N1
+  return uart_write_bytes_with_break(uartNum, (const void *)msg, msgSize, 12);
 }

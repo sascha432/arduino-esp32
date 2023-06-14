@@ -15,13 +15,11 @@
 #define _LITTLEFS_H_
 
 #include "FS.h"
-#include "littlefs/lfs.h"
-#include <sdkconfig.h>
 
 namespace fs
 {
 
-struct FSInfo {
+    struct FSInfo {
     size_t totalBytes;
     size_t usedBytes;
     int blockSize;

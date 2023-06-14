@@ -31,6 +31,11 @@
 #include "sdkconfig.h"
 #include "esp_system.h"
 #include "esp_sleep.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+#include "freertos/event_groups.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,8 +44,12 @@ extern "C" {
 #ifndef F_CPU
 #if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
 #define F_CPU (CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ * 1000000U)
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define F_CPU (CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ * 1000000U)
 #elif CONFIG_IDF_TARGET_ESP32S2
 #define F_CPU (CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ * 1000000U)
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define F_CPU (CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ * 1000000U)
 #endif
 #endif
 
@@ -83,10 +92,19 @@ void yield(void);
 #include "esp32-hal-timer.h"
 #include "esp32-hal-bt.h"
 #include "esp32-hal-psram.h"
+#include "esp32-hal-rgb-led.h"
 #include "esp32-hal-cpu.h"
+
+void analogWrite(uint8_t pin, int value);
+int8_t analogGetChannel(uint8_t pin);
+void analogWriteFrequency(uint32_t freq);
+void analogWriteResolution(uint8_t bits);
 
 //returns chip temperature in Celsius
 float temperatureRead();
+
+//allows user to bypass SPI RAM test routine
+bool testSPIRAM(void);
 
 #if CONFIG_AUTOSTART_ARDUINO
 //enable/disable WDT for Arduino's setup and loop functions

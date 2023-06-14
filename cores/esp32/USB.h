@@ -43,10 +43,10 @@ class ESPUSB {
     public:
         ESPUSB(size_t event_task_stack_size=2048, uint8_t event_task_priority=5);
         ~ESPUSB();
-
+        
         void onEvent(esp_event_handler_t callback);
         void onEvent(arduino_usb_event_t event, esp_event_handler_t callback);
-
+        
         bool VID(uint16_t v);
         uint16_t VID(void);
 
@@ -76,7 +76,7 @@ class ESPUSB {
 
         bool webUSB(bool enabled);
         bool webUSB(void);
-
+        
         bool productName(const char * name);
         const char * productName(void);
 
@@ -92,7 +92,7 @@ class ESPUSB {
         bool enableDFU();
         bool begin();
         operator bool() const;
-
+        
     private:
         uint16_t vid;
         uint16_t pid;
@@ -108,7 +108,7 @@ class ESPUSB {
         uint16_t usb_power_ma;
         bool webusb_enabled;
         String webusb_url;
-
+        
         bool _started;
         size_t _task_stack_size;
         uint8_t _event_task_priority;

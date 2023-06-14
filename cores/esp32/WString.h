@@ -23,47 +23,25 @@
 #define String_class_h
 #ifdef __cplusplus
 
-#include <pgmspace.h>
-
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-#include <cctype>
-
-#include <utility>
-#include <type_traits>
-
 #ifdef _MSC_VER
 #include <misc_wstring.h>
 #else
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <pgmspace.h>
 #include "misc_wstring.h"
 #endif
-// #include <stdlib.h>
-// #include <string.h>
-// #include <ctype.h>
-// #include <pgmspace.h>
-// #include <stdint.h>
+
+// A pure abstract class forward used as a means to proide a unique pointer type
+// but really is never defined.
+class __FlashStringHelper;
+#define FPSTR(str_pointer) (reinterpret_cast<const __FlashStringHelper *>(str_pointer))
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
 
 // An inherited class for holding the result of a concatenation.  These
 // result objects are assumed to be writable by subsequent concatenations.
-class StringSumHelper;
-
- // an abstract class used as a means to proide a unique pointer type
- // but really has no body
-class __FlashStringHelper;
-#ifndef FPSTR
-#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
-#endif
-#ifndef F
-#define F(string_literal) (FPSTR(PSTR(string_literal)))
-#endif
-
-// support libraries that expect this name to be available
-// replace with `using StringSumHelper = String;` in case something wants this constructible
 class StringSumHelper;
 
 // The string class
@@ -87,10 +65,10 @@ class String {
         String(const char *cstr);
         String(const char *cstr, unsigned int length);
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-        String(const uint8_t *cstr, unsigned int length) : String((const char*)cstr, length) {}
+        String(const uint8_t *cstr, unsigned int length) : String(reinterpret_cast<const char*>(cstr), length) {}
 #endif
         String(const String &str);
-        String(const __FlashStringHelper *str);
+        String(const __FlashStringHelper *str) : String(reinterpret_cast<const char*>(str)) {}
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
         String(String &&rval);
         String(StringSumHelper &&rval);
@@ -101,8 +79,8 @@ class String {
         explicit String(unsigned int, unsigned char base = 10);
         explicit String(long, unsigned char base = 10);
         explicit String(unsigned long, unsigned char base = 10);
-        explicit String(long long /* base 10 */);
-        explicit String(unsigned long long /* base 10 */);
+        explicit String(long long/*, unsigned char base = 10*/);
+        explicit String(unsigned long long/*, unsigned char base = 10*/);
         explicit String(float, unsigned char decimalPlaces = 2);
         explicit String(double, unsigned char decimalPlaces = 2);
         ~String() {
@@ -131,44 +109,90 @@ class String {
         // creates a copy of the assigned value.  if the value is null or
         // invalid, or if the memory allocation fails, the string will be
         // marked as invalid ("if (s)" will be false).
-        String &operator =(const String &rhs);
-        String &operator =(const char *cstr);
-        String &operator =(const __FlashStringHelper *str);
+        String & operator =(const String &rhs);
+        String & operator =(const char *cstr);
+        String & operator = (const __FlashStringHelper *str) {return *this = reinterpret_cast<const char*>(str);}
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
         String & operator =(String &&rval);
         String & operator =(StringSumHelper &&rval);
 #endif
 
-        // concatenate (works w/ built-in types)
+        // concatenate (works w/ built-in types, same as assignment)
 
         // returns true on success, false on failure (in which case, the string
         // is left unchanged).  if the argument is null or invalid, the
         // concatenation is considered unsuccessful.
-        unsigned char concat(const String &str);
-        unsigned char concat(const char *cstr);
-        unsigned char concat(const uint8_t *cstr, unsigned int length) {return concat((const char*)cstr, length);}
-        unsigned char concat(char c);
-        unsigned char concat(unsigned char c);
-        unsigned char concat(int num);
-        unsigned char concat(unsigned int num);
-        unsigned char concat(long num);
-        unsigned char concat(unsigned long num);
-        unsigned char concat(float num);
-        unsigned char concat(double num);
-        unsigned char concat(const __FlashStringHelper * str);
+        bool concat(const String &str);
+        bool concat(const char *cstr);
+        bool concat(const char *cstr, unsigned int length);
+        bool concat(const uint8_t *cstr, unsigned int length) {return concat(reinterpret_cast<const char*>(cstr), length);}
+        bool concat(char c);
+        bool concat(unsigned char c);
+        bool concat(int num);
+        bool concat(unsigned int num);
+        bool concat(long num);
+        bool concat(unsigned long num);
+        bool concat(float num);
+        bool concat(double num);
+        bool concat(long long num);
+        bool concat(unsigned long long num);
+        bool concat(const __FlashStringHelper * str) {return concat(reinterpret_cast<const char*>(str));}
 
         // if there's not enough memory for the concatenated value, the string
         // will be left unchanged (but this isn't signalled in any way)
-        // if there's not enough memory for the concatenated value, the string
-        // will be left unchanged (but this isn't signalled in any way)
-        template <typename T>
-        String &operator +=(const T &rhs) {
+        String & operator +=(const String &rhs) {
             concat(rhs);
-            return *this;
+            return (*this);
         }
+        String & operator +=(const char *cstr) {
+            concat(cstr);
+            return (*this);
+        }
+        String & operator +=(char c) {
+            concat(c);
+            return (*this);
+        }
+        String & operator +=(unsigned char num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(int num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(unsigned int num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(long num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(unsigned long num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(float num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(double num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(long long num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator +=(unsigned long long num) {
+            concat(num);
+            return (*this);
+        }
+        String & operator += (const __FlashStringHelper *str) {return *this += reinterpret_cast<const char*>(str);}
 
         friend StringSumHelper & operator +(const StringSumHelper &lhs, const String &rhs);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, const char *cstr);
+        friend StringSumHelper & operator +(const StringSumHelper &lhs, const __FlashStringHelper *rhs);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, char c);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, unsigned char num);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, int num);
@@ -177,7 +201,6 @@ class String {
         friend StringSumHelper & operator +(const StringSumHelper &lhs, unsigned long num);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, float num);
         friend StringSumHelper & operator +(const StringSumHelper &lhs, double num);
-        friend StringSumHelper & operator +(const StringSumHelper &lhs, const __FlashStringHelper *rhs);
 
         // comparison (only works w/ Strings and "strings")
         operator StringIfHelperType() const {
@@ -277,7 +300,7 @@ class String {
         bool equals(char ch) const {
             if (length() != 1 || !ch) {
                 return false;
-            }
+        }
             return buffer()[0] == ch;
         }
 
@@ -302,10 +325,7 @@ class String {
         }
 
         bool equals(const __FlashStringHelper *fStr) const {
-            if (!fStr) {
-                return false;
-            }
-            return strcmp_P(buffer(), reinterpret_cast<PGM_P>(fStr)) == 0;
+            return equals(reinterpret_cast<PGM_P>(fStr));
         }
 
         // return true if String matches the end of str1
@@ -326,16 +346,7 @@ class String {
         }
 
         bool endEquals(const __FlashStringHelper *fStr) const {
-            PGM_P str1 = reinterpret_cast<PGM_P>(fStr);
-            size_t len1;
-            size_t len2;
-            if (!str1 || (len2 = length()) > (len1 = strlen_P(str1))) {
-                return false;
-            }
-            if (len2 == len1) {
-                return strcmp_P_P(str1, buffer()) == 0;
-            }
-            return strcmp_P_P(str1 + len1 - len2, buffer()) == 0;
+            return endEquals(reinterpret_cast<PGM_P>(fStr));
         }
 
         // we can use endsWith in this case
@@ -361,16 +372,7 @@ class String {
         }
 
         bool endEqualsIgnoreCase(const __FlashStringHelper *fStr) const {
-            PGM_P str1 = reinterpret_cast<PGM_P>(fStr);
-            size_t len1;
-            size_t len2;
-            if (!str1 || (len2 = length()) > (len1 = strlen_P(str1))) {
-                return false;
-            }
-            if (len2 == len1) {
-                return strcasecmp_P_P(str1, buffer()) == 0;
-            }
-            return strcasecmp_P_P(str1 + len1 - len2, buffer()) == 0;
+            return endEqualsIgnoreCase(reinterpret_cast<PGM_P>(fStr));
         }
 
         // we can just use endsWithIgnoreCase in this case
@@ -399,10 +401,7 @@ class String {
         }
 
         unsigned char equals(const __FlashStringHelper *fStr, size_t offset) const {
-            if (!fStr || offset >= length()) {
-                return false;
-            }
-            return strcmp_P(buffer() + offset, reinterpret_cast<PGM_P>(fStr)) == 0;
+            return equals(reinterpret_cast<PGM_P>(fStr), offset);
         }
 
         //
@@ -429,10 +428,7 @@ class String {
         }
 
         unsigned char equalsIgnoreCase(const __FlashStringHelper *fStr, size_t offset = 0) const {
-            if (!fStr || offset >= length()) {
-                return false;
-            }
-            return strcasecmp_P(buffer() + offset, reinterpret_cast<PGM_P>(fStr)) == 0;
+            return equalsIgnoreCase(reinterpret_cast<PGM_P>(fStr), offset);
         }
 
     // additional startWith methods with ignorecase and support for char, const char *, const __FlashStringHelper * and String
@@ -445,15 +441,15 @@ class String {
         inline  unsigned char _startsWith(const char *prefix, size_t prefixLen, size_t offset) const {
             return prefixLen && (length() >= prefixLen + offset) && !strncmp(c_str() + offset, prefix, prefixLen);
         }
-        inline unsigned char _startsWith_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
-            return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
-        }
+        // inline unsigned char _startsWith_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
+        //     return prefixLen && (length() >= prefixLen + offset) && !strncmp_P(c_str() + offset, prefix, prefixLen);
+        // }
         inline unsigned char _startsWithIgnoreCase(const char *prefix, size_t prefixLen, size_t offset) const {
             return prefixLen && (length() >= prefixLen + offset) && !strncasecmp(c_str() + offset, prefix, prefixLen);
         }
-        inline unsigned char _startsWithIgnoreCase_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
-            return prefixLen && (length() >= prefixLen + offset) && !strncasecmp_P(c_str() + offset, prefix, prefixLen);
-        }
+        // inline unsigned char _startsWithIgnoreCase_P(PGM_P prefix, size_t prefixLen, size_t offset) const {
+        //     return prefixLen && (length() >= prefixLen + offset) && !strncasecmp_P(c_str() + offset, prefix, prefixLen);
+        // }
 
         //
         // startsWith(<char|const char *|const String &|const __FlashStringHelper *>[,offset]])
@@ -473,7 +469,7 @@ class String {
             return ((len = prefix.length())) != 0 && _startsWith(prefix.buffer(), len, offset);
         }
         unsigned char startsWith(const __FlashStringHelper *prefix, size_t offset = 0) const {
-            return prefix && _startsWith_P(reinterpret_cast<PGM_P>(prefix), strlen_P(reinterpret_cast<PGM_P>(prefix)), offset);
+            return startsWith(reinterpret_cast<PGM_P>(prefix), offset);
         }
 
         //
@@ -491,7 +487,7 @@ class String {
             return ((len = prefix.length())) != 0 && _startsWithIgnoreCase(prefix.buffer(), len, offset);
         }
         unsigned char startsWithIgnoreCase(const __FlashStringHelper *prefix, size_t offset = 0) const {
-            return prefix && _startsWithIgnoreCase_P(reinterpret_cast<PGM_P>(prefix), strlen_P(reinterpret_cast<PGM_P>(prefix)), offset);
+            return startsWithIgnoreCase(reinterpret_cast<PGM_P>(prefix), offset);
         }
 
     protected:
@@ -504,21 +500,21 @@ class String {
             size_t len;
             return suffixLen && ((len = length()) >= suffixLen) && !strcmp(buffer() + len - suffixLen, suffix);
         }
-        inline __attribute__((__always_inline__))
-            unsigned char _endsWith_P(PGM_P suffix, size_t suffixLen) const {
-            size_t len;
-            return suffixLen && ((len = length()) >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
-        }
+        // inline __attribute__((__always_inline__))
+        //     unsigned char _endsWith_P(PGM_P suffix, size_t suffixLen) const {
+        //     size_t len;
+        //     return suffixLen && ((len = length()) >= suffixLen) && !strcmp_P(buffer() + len - suffixLen, suffix);
+        // }
         inline __attribute__((__always_inline__))
             unsigned char _endsWithIgnoreCase(const char *suffix, size_t suffixLen) const {
             size_t len;
             return suffixLen && ((len = length()) >= suffixLen) && !strcasecmp(buffer() + len - suffixLen, suffix);
         }
-        inline __attribute__((__always_inline__))
-            unsigned char _endsWithIgnoreCase_P(PGM_P suffix, size_t suffixLen) const {
-            size_t len;
-            return suffixLen && ((len = length()) >= suffixLen) && !strcasecmp_P(buffer() + len - suffixLen, suffix);
-        }
+        // inline __attribute__((__always_inline__))
+        //     unsigned char _endsWithIgnoreCase_P(PGM_P suffix, size_t suffixLen) const {
+        //     size_t len;
+        //     return suffixLen && ((len = length()) >= suffixLen) && !strcasecmp_P(buffer() + len - suffixLen, suffix);
+        // }
 
 
     // additional endsWith methods with ignorecase and support for char, const char *, const __FlashStringHelper * and String
@@ -538,7 +534,7 @@ class String {
             return suffix && _endsWith(suffix, strlen(suffix));
         }
         unsigned char endsWith(const __FlashStringHelper *suffix) const {
-            return suffix && _endsWith_P(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
+            return endsWith(reinterpret_cast<PGM_P>(suffix));
         }
 
         //
@@ -556,7 +552,7 @@ class String {
             return suffix && _endsWithIgnoreCase(suffix, strlen(suffix));
         }
         unsigned char endsWithIgnoreCase(const __FlashStringHelper *suffix) const {
-            return suffix && _endsWithIgnoreCase_P(reinterpret_cast<PGM_P>(suffix), strlen_P(reinterpret_cast<PGM_P>(suffix)));
+            return endsWithIgnoreCase(reinterpret_cast<PGM_P>(suffix));
         }
 
 
@@ -603,33 +599,33 @@ class String {
             return idxPtr - ptr;
         }
 
-        int _indexOf_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
-        {
-            size_t len;
-            if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
-                return -1;
-            }
-            auto ptr = buffer();
-            auto idxPtr = strstr_P(ptr + fromIndex, find);
-            if (!idxPtr) {
-                return -1;
-            }
-            return idxPtr - ptr;
-        }
+        // int _indexOf_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
+        // {
+        //     size_t len;
+        //     if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
+        //         return -1;
+        //     }
+        //     auto ptr = buffer();
+        //     auto idxPtr = strstr_P(ptr + fromIndex, find);
+        //     if (!idxPtr) {
+        //         return -1;
+        //     }
+        //     return idxPtr - ptr;
+        // }
 
-        int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength) const
-        {
-            size_t len;
-            if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
-                return -1;
-            }
-            auto ptr = buffer();
-            auto idxPtr = stristr_P(const_cast<char *>(ptr) + fromIndex, find, findLength);
-            if (!idxPtr) {
-                return -1;
-            }
-            return idxPtr - ptr;
-        }
+        // int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength) const
+        // {
+        //     size_t len;
+        //     if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
+        //         return -1;
+        //     }
+        //     auto ptr = buffer();
+        //     auto idxPtr = stristr_P(const_cast<char *>(ptr) + fromIndex, find, findLength);
+        //     if (!idxPtr) {
+        //         return -1;
+        //     }
+        //     return idxPtr - ptr;
+        // }
 
         int _lastIndexOf(char find) const
         {
@@ -640,14 +636,14 @@ class String {
             return ptr - buffer();
         }
 
-        int _lastIndexOf_P(char find) const
-        {
-            auto ptr = strrchr_P(buffer(), find);
-            if (!ptr) {
-                return -1;
-            }
-            return ptr - buffer();
-        }
+        // int _lastIndexOf_P(char find) const
+        // {
+        //     auto ptr = strrchr_P(buffer(), find);
+        //     if (!ptr) {
+        //         return -1;
+        //     }
+        //     return ptr - buffer();
+        // }
 
         int _lastIndexOf(char find, size_t fromIndex) const
         {
@@ -668,43 +664,43 @@ class String {
             return ptr - buffer();
         }
 
-        int _lastIndexOf_P(char find, size_t fromIndex) const
-        {
-            if (!find) {
-                return -1;
-            }
-            auto len = length();
-            if (fromIndex == ~0U) {
-                fromIndex = len;
-            }
-            else if (fromIndex > len || fromIndex < 1) {
-                return -1;
-            }
-            auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
-            if (!ptr) {
-                return -1;
-            }
-            return ptr - buffer();
-        }
+        // int _lastIndexOf_P(char find, size_t fromIndex) const
+        // {
+        //     if (!find) {
+        //         return -1;
+        //     }
+        //     auto len = length();
+        //     if (fromIndex == ~0U) {
+        //         fromIndex = len;
+        //     }
+        //     else if (fromIndex > len || fromIndex < 1) {
+        //         return -1;
+        //     }
+        //     auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
+        //     if (!ptr) {
+        //         return -1;
+        //     }
+        //     return ptr - buffer();
+        // }
 
-        int _lastIndexOf_P(PGM_P find, size_t fromIndex, size_t findLen) const
-        {
-            size_t len;
-            if (!find || !(len = length())) {
-                return -1;
-            }
-            if (fromIndex == ~0U) {
-                fromIndex = len;
-            }
-            else if (fromIndex < findLen || fromIndex > len) {
-                return -1;
-            }
-            auto ptr = __strrstr_P(const_cast<char *>(buffer()), fromIndex + findLen, find, findLen);
-            if (!ptr) {
-                return -1;
-            }
-            return ptr - buffer();
-        }
+        // int _lastIndexOf_P(PGM_P find, size_t fromIndex, size_t findLen) const
+        // {
+        //     size_t len;
+        //     if (!find || !(len = length())) {
+        //         return -1;
+        //     }
+        //     if (fromIndex == ~0U) {
+        //         fromIndex = len;
+        //     }
+        //     else if (fromIndex < findLen || fromIndex > len) {
+        //         return -1;
+        //     }
+        //     auto ptr = __strrstr_P(const_cast<char *>(buffer()), fromIndex + findLen, find, findLen);
+        //     if (!ptr) {
+        //         return -1;
+        //     }
+        //     return ptr - buffer();
+        // }
 
         int _lastIndexOf(const char *find, size_t fromIndex, size_t findLen) const
         {
@@ -736,7 +732,7 @@ class String {
             return _indexOf(str, fromIndex, ~0U);
         }
         int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
-            return _indexOf_P(reinterpret_cast<PGM_P>(fstr), fromIndex, ~0U);
+            return indexOf(reinterpret_cast<PGM_P>(fstr), fromIndex);
         }
 
 
@@ -757,7 +753,7 @@ class String {
             return _indexOfIgnoreCase(str.c_str(), fromIndex, str.length());
         }
         int indexOfIgnoreCase(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
-            return _indexOfIgnoreCase_P(reinterpret_cast<PGM_P>(fstr), fromIndex, ~0U);
+            return indexOfIgnoreCase(reinterpret_cast<PGM_P>(fstr), fromIndex);
         }
 
 
@@ -775,9 +771,12 @@ class String {
             auto findLength = str.length();
             return _lastIndexOf(str.buffer(), fromIndex - findLength, findLength);
         }
+        int lastIndexOf(const char *str, unsigned int fromIndex) const {
+            auto findLength = strlen(str);
+            return _lastIndexOf(str, fromIndex - findLength, findLength);
+        }
         int lastIndexOf(const __FlashStringHelper *str, unsigned int fromIndex) const {
-            auto findLength = strlen_P(reinterpret_cast<PGM_P>(str));
-            return _lastIndexOf_P(reinterpret_cast<PGM_P>(str), fromIndex - findLength, findLength);
+            return lastIndexOf(reinterpret_cast<PGM_P>(str), fromIndex);
         }
 
 
@@ -1001,9 +1000,6 @@ class String {
         void invalidate(void);
         unsigned char changeBuffer(unsigned int maxStrLen);
 
-    public:
-        unsigned char concat(const char *cstr, unsigned int length);
-
     protected:
 
         // copy and move
@@ -1046,7 +1042,17 @@ class StringSumHelper: public String {
         StringSumHelper(double num) :
                 String(num) {
         }
+        StringSumHelper(long long num) :
+                String(num) {
+        }
+        StringSumHelper(unsigned long long num) :
+                String(num) {
+        }
 };
+
+inline StringSumHelper & operator +(const StringSumHelper &lhs, const __FlashStringHelper *rhs) {
+        return lhs + reinterpret_cast<const char*>(rhs);
+}
 
 extern const String emptyString;
 

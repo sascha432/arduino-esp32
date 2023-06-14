@@ -1076,17 +1076,24 @@
 #define DPORT_CORE_RST_EN_REG          (DR_REG_DPORT_BASE + 0x0D0)
 /* DPORT_CORE_RST : R/W ;bitpos:[31:0] ;default: 32'h0 ; */
 /*description: */
-#define DPORT_RW_BTLP_RST (BIT(10))
-#define DPORT_RW_BTMAC_RST (BIT(9))
-#define DPORT_MACPWR_RST (BIT(8))
-#define DPORT_EMAC_RST (BIT(7))
-#define DPORT_SDIO_HOST_RST (BIT(6))
-#define DPORT_SDIO_RST (BIT(5))
-#define DPORT_BTMAC_RST (BIT(4))
-#define DPORT_BT_RST (BIT(3))
-#define DPORT_MAC_RST (BIT(2))
-#define DPORT_FE_RST (BIT(1))
-#define DPORT_BB_RST (BIT(0))
+#define DPORT_WIFIBB_RST       BIT(0)
+#define DPORT_FE_RST           BIT(1)
+#define DPORT_WIFIMAC_RST      BIT(2)
+#define DPORT_BTBB_RST         BIT(3)
+#define DPORT_BTMAC_RST        BIT(4)
+#define DPORT_SDIO_RST         BIT(5)
+#define DPORT_SDIO_HOST_RST    BIT(6)
+#define DPORT_EMAC_RST         BIT(7)
+#define DPORT_MACPWR_RST       BIT(8)
+#define DPORT_RW_BTMAC_RST     BIT(9)
+#define DPORT_RW_BTLP_RST      BIT(10)
+
+#define MODEM_RESET_FIELD_WHEN_PU   (DPORT_WIFIBB_RST       | \
+                                     DPORT_FE_RST           | \
+                                     DPORT_WIFIMAC_RST      | \
+                                     DPORT_BTBB_RST         | \
+                                     DPORT_BTMAC_RST        | \
+                                     DPORT_RW_BTMAC_RST)
 
 #define DPORT_BT_LPCK_DIV_INT_REG          (DR_REG_DPORT_BASE + 0x0D4)
 /* DPORT_BTEXTWAKEUP_REQ : R/W ;bitpos:[12] ;default: 1'b0 ; */
@@ -1156,6 +1163,8 @@
 #define DPORT_CPU_INTR_FROM_CPU_1_V  0x1
 #define DPORT_CPU_INTR_FROM_CPU_1_S  0
 
+#define SYSTEM_CPU_INTR_FROM_CPU_2_REG          DPORT_CPU_INTR_FROM_CPU_2_REG
+#define SYSTEM_CPU_INTR_FROM_CPU_2              DPORT_CPU_INTR_FROM_CPU_2
 #define DPORT_CPU_INTR_FROM_CPU_2_REG          (DR_REG_DPORT_BASE + 0x0E4)
 /* DPORT_CPU_INTR_FROM_CPU_2 : R/W ;bitpos:[0] ;default: 1'b0 ; */
 /*description: */
@@ -1164,6 +1173,8 @@
 #define DPORT_CPU_INTR_FROM_CPU_2_V  0x1
 #define DPORT_CPU_INTR_FROM_CPU_2_S  0
 
+#define SYSTEM_CPU_INTR_FROM_CPU_3_REG          DPORT_CPU_INTR_FROM_CPU_3_REG
+#define SYSTEM_CPU_INTR_FROM_CPU_3              DPORT_CPU_INTR_FROM_CPU_3
 #define DPORT_CPU_INTR_FROM_CPU_3_REG          (DR_REG_DPORT_BASE + 0x0E8)
 /* DPORT_CPU_INTR_FROM_CPU_3 : R/W ;bitpos:[0] ;default: 1'b0 ; */
 /*description: */

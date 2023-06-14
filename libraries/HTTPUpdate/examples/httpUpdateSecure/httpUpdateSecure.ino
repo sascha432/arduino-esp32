@@ -17,10 +17,6 @@ WiFiMulti WiFiMulti;
 
 // Set time via NTP, as required for x.509 validation
 void setClock() {
-  /*
-    Note: Bundled Arduino lwip supports only ONE ntp server, 2nd and 3rd options are silently ignored
-    see CONFIG_LWIP_DHCP_MAX_NTP_SERVERS define in ./tools/sdk/esp32/sdkconfig
-  */
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");  // UTC
 
   Serial.print(F("Waiting for NTP time sync: "));
@@ -110,7 +106,9 @@ void loop() {
     // value is used to put the LED on. If the LED is on with HIGH, that value should be passed
     // httpUpdate.setLedPin(LED_BUILTIN, HIGH);
 
-    t_httpUpdate_return ret = httpUpdate.update(client, "https://server/file.bin");
+    t_httpUpdate_return ret = httpUpdate.update(client, "https://server/file.bin", "", [](HTTPClient *client) {
+      client->setAuthorization("test", "password");
+    });
     // Or:
     //t_httpUpdate_return ret = httpUpdate.update(client, "server", 443, "/file.bin");
 

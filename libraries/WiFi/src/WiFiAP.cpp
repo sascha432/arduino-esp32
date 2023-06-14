@@ -47,7 +47,7 @@ extern "C" {
 // -----------------------------------------------------------------------------------------------------------------------
 
 esp_netif_t* get_esp_interface_netif(esp_interface_t interface);
-esp_err_t set_esp_interface_ip(esp_interface_t interface, IPAddress local_ip=IPAddress(), IPAddress gateway=IPAddress(), IPAddress subnet=IPAddress());
+esp_err_t set_esp_interface_ip(esp_interface_t interface, IPAddress local_ip=INADDR_NONE, IPAddress gateway=INADDR_NONE, IPAddress subnet=INADDR_NONE, IPAddress dhcp_lease_start=INADDR_NONE);
 static bool softap_config_equal(const wifi_config_t& lhs, const wifi_config_t& rhs);
 
 static size_t _wifi_strncpy(char * dst, const char * src, size_t dst_len){
@@ -136,12 +136,6 @@ void wifi_softap_config(wifi_config_t *wifi_config, const char * ssid=NULL, cons
 bool WiFiAPClass::softAP(const char* ssid, const char* passphrase, int channel, int ssid_hidden, int max_connection, bool ftm_responder)
 {
 
-    if(!WiFi.enableAP(true)) {
-        // enable AP failed
-        log_e("enable AP first!");
-        return false;
-    }
-
     if(!ssid || *ssid == 0) {
         // fail SSID missing
         log_e("SSID missing!");
@@ -151,6 +145,13 @@ bool WiFiAPClass::softAP(const char* ssid, const char* passphrase, int channel, 
     if(passphrase && (strlen(passphrase) > 0 && strlen(passphrase) < 8)) {
         // fail passphrase too short
         log_e("passphrase too short!");
+        return false;
+    }
+
+    // last step after checking the SSID and password
+    if(!WiFi.enableAP(true)) {
+        // enable AP failed
+        log_e("enable AP first!");
         return false;
     }
 
@@ -195,7 +196,7 @@ String WiFiAPClass::softAPSSID() const
  * @param gateway       gateway IP
  * @param subnet        subnet mask
  */
-bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet)
+bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet, IPAddress dhcp_lease_start)
 {
     esp_err_t err = ESP_OK;
 
@@ -204,7 +205,7 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
         return false;
     }
 
-    err = set_esp_interface_ip(ESP_IF_WIFI_AP, local_ip, gateway, subnet);
+    err = set_esp_interface_ip(ESP_IF_WIFI_AP, local_ip, gateway, subnet, dhcp_lease_start);
     return err == ESP_OK;
 }
 

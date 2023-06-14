@@ -64,6 +64,7 @@ IPAddress::IPAddress(const ip_addr &address)
     }
 }
 
+
 IPAddress& IPAddress::operator=(const uint8_t *address)
 {
     memcpy(_address.bytes, address, sizeof(_address.bytes));
@@ -140,3 +141,6 @@ bool IPAddress::fromString(const char *address)
     _address.bytes[3] = acc;
     return true;
 }
+
+// declared one time - as external in IPAddress.h
+IPAddress INADDR_NONE(0, 0, 0, 0);
