@@ -1,19 +1,17 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef _ESP_NETIF_TYPES_H_
 #define _ESP_NETIF_TYPES_H_
+
+#include <stdbool.h>
+#include <stdint.h>
+#include "esp_event_base.h"
+#include "esp_err.h"
+#include "esp_netif_ip_addr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,6 +79,8 @@ typedef enum{
     ESP_NETIF_REQUESTED_IP_ADDRESS          = 50,   /**< Request specific IP address */
     ESP_NETIF_IP_ADDRESS_LEASE_TIME         = 51,   /**< Request IP address lease time */
     ESP_NETIF_IP_REQUEST_RETRY_TIME         = 52,   /**< Request IP address retry counter */
+    ESP_NETIF_VENDOR_CLASS_IDENTIFIER       = 60,   /**< Vendor Class Identifier of a DHCP client */
+    ESP_NETIF_VENDOR_SPECIFIC_INFO          = 43,   /**< Vendor Specific Information of a DHCP server */
 } esp_netif_dhcp_option_id_t;
 
 /** IP event declarations */
@@ -112,6 +112,11 @@ typedef struct {
     esp_ip6_addr_t ip; /**< Interface IPV6 address */
 } esp_netif_ip6_info_t;
 
+
+/**
+ * @brief Event structure for IP_EVENT_GOT_IP event
+ *
+ */
 typedef struct {
     int if_index;                    /*!< Interface index for which the event is received (left for legacy compilation) */
     esp_netif_t *esp_netif;          /*!< Pointer to corresponding esp-netif object */
@@ -164,6 +169,10 @@ typedef enum esp_netif_ip_event_type {
 //      3) network stack specific config (esp_netif_net_stack_ifconfig_t) -- no publicly available
 //
 
+/**
+ * @brief ESP-netif inherent config parameters
+ *
+ */
 typedef struct esp_netif_inherent_config {
     esp_netif_flags_t flags;         /*!< flags that define esp-netif behavior */
     uint8_t mac[6];                  /*!< initial mac address for this interface */
@@ -185,19 +194,23 @@ typedef struct esp_netif_config esp_netif_config_t;
  */
 typedef void * esp_netif_iodriver_handle;
 
+/**
+ * @brief ESP-netif driver base handle
+ *
+ */
 typedef struct esp_netif_driver_base_s {
-    esp_err_t (*post_attach)(esp_netif_t *netif, esp_netif_iodriver_handle h);
-    esp_netif_t *netif;
+    esp_err_t (*post_attach)(esp_netif_t *netif, esp_netif_iodriver_handle h); /*!< post attach function pointer */
+    esp_netif_t *netif; /*!< netif handle */
 } esp_netif_driver_base_t;
 
 /**
  * @brief  Specific IO driver configuration
  */
 struct esp_netif_driver_ifconfig {
-    esp_netif_iodriver_handle handle;
-    esp_err_t (*transmit)(void *h, void *buffer, size_t len);
-    esp_err_t (*transmit_wrap)(void *h, void *buffer, size_t len, void *netstack_buffer);
-    void (*driver_free_rx_buffer)(void *h, void* buffer);
+    esp_netif_iodriver_handle handle; /*!< io-driver handle */
+    esp_err_t (*transmit)(void *h, void *buffer, size_t len); /*!< transmit function pointer */
+    esp_err_t (*transmit_wrap)(void *h, void *buffer, size_t len, void *netstack_buffer); /*!< transmit wrap function pointer */
+    void (*driver_free_rx_buffer)(void *h, void* buffer); /*!< free rx buffer function pointer */
 };
 
 typedef struct esp_netif_driver_ifconfig esp_netif_driver_ifconfig_t;
@@ -212,9 +225,9 @@ typedef struct esp_netif_netstack_config esp_netif_netstack_config_t;
  * @brief  Generic esp_netif configuration
  */
 struct esp_netif_config {
-    const esp_netif_inherent_config_t *base;
-    const esp_netif_driver_ifconfig_t *driver;
-    const esp_netif_netstack_config_t *stack;
+    const esp_netif_inherent_config_t *base; /*!< base config */
+    const esp_netif_driver_ifconfig_t *driver; /*!< driver config */
+    const esp_netif_netstack_config_t *stack; /*!< stack config */
 };
 
 /**

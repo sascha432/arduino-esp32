@@ -1,16 +1,8 @@
-// Copyright 2015-2020 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
 
@@ -18,13 +10,11 @@
 #include <stdbool.h>
 #include "ets_sys.h"
 #include "rsa_pss.h"
+#include "esp_assert.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-struct ets_secure_boot_sig_block;
-struct ets_secure_boot_signature_t;
 
 typedef struct ets_secure_boot_sig_block ets_secure_boot_sig_block_t;
 typedef struct ets_secure_boot_signature ets_secure_boot_signature_t;
@@ -91,7 +81,7 @@ struct ets_secure_boot_sig_block {
     uint8_t _padding[16];
 };
 
-_Static_assert(sizeof(ets_secure_boot_sig_block_t) == 1216, "ets_secure_boot_sig_block_t should occupy 1216 Bytes in memory");
+ESP_STATIC_ASSERT(sizeof(ets_secure_boot_sig_block_t) == 1216, "ets_secure_boot_sig_block_t should occupy 1216 Bytes in memory");
 
 #define SECURE_BOOT_NUM_BLOCKS 3
 
@@ -101,7 +91,7 @@ struct ets_secure_boot_signature {
     uint8_t _padding[4096 - (sizeof(ets_secure_boot_sig_block_t) * SECURE_BOOT_NUM_BLOCKS)];
 };
 
-_Static_assert(sizeof(ets_secure_boot_signature_t) == 4096, "ets_secure_boot_signature_t should occupy 4096 Bytes in memory");
+ESP_STATIC_ASSERT(sizeof(ets_secure_boot_signature_t) == 4096, "ets_secure_boot_signature_t should occupy 4096 Bytes in memory");
 
 #define MAX_KEY_DIGESTS 3
 

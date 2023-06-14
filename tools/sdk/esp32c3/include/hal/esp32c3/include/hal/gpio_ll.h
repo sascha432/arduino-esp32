@@ -1,16 +1,8 @@
-// Copyright 2020 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2020-2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*******************************************************************************
  * NOTICE
@@ -22,26 +14,18 @@
 
 #pragma once
 
+#include <stdlib.h>
+#include <stdbool.h>
 #include "soc/soc.h"
 #include "soc/gpio_periph.h"
+#include "soc/gpio_struct.h"
 #include "soc/rtc_cntl_reg.h"
+#include "soc/usb_serial_jtag_reg.h"
 #include "hal/gpio_types.h"
-#include "stdlib.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*
- * The following defines are used to disable USB JTAG when pins 18 and pins 19
- * are set to be used as GPIO.
- * See gpio_pad_select_gpio() below.
- *
- * TODO: Delete these definitions once the USB device registers definition is
- * merged.
- */
-#define USB_DEVICE_CONF0_REG        (0x60043018)
-#define USB_DEVICE_USB_PAD_ENABLE   (BIT(14))
 
 // Get GPIO hardware instance with giving gpio num
 #define GPIO_LL_GET_HW(num) (((num) == 0) ? (&GPIO) : NULL)
@@ -65,9 +49,16 @@ static inline void gpio_ll_pullup_en(gpio_dev_t *hw, gpio_num_t gpio_num)
   * @param hw Peripheral GPIO hardware instance address.
   * @param gpio_num GPIO number
   */
+__attribute__((always_inline))
 static inline void gpio_ll_pullup_dis(gpio_dev_t *hw, gpio_num_t gpio_num)
 {
-    REG_CLR_BIT(GPIO_PIN_MUX_REG[gpio_num], FUN_PU);
+    // The pull-up value of the USB pins are controlled by the pins’ pull-up value together with USB pull-up value
+    // USB DP pin is default to PU enabled
+    if (gpio_num == USB_DP_GPIO_NUM) {
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PAD_PULL_OVERRIDE);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLUP);
+    }
+    REG_CLR_BIT(IO_MUX_GPIO0_REG + (gpio_num * 4), FUN_PU);
 }
 
 /**
@@ -87,9 +78,10 @@ static inline void gpio_ll_pulldown_en(gpio_dev_t *hw, gpio_num_t gpio_num)
   * @param hw Peripheral GPIO hardware instance address.
   * @param gpio_num GPIO number
   */
+__attribute__((always_inline))
 static inline void gpio_ll_pulldown_dis(gpio_dev_t *hw, gpio_num_t gpio_num)
 {
-    REG_CLR_BIT(GPIO_PIN_MUX_REG[gpio_num], FUN_PD);
+    REG_CLR_BIT(IO_MUX_GPIO0_REG + (gpio_num * 4), FUN_PD);
 }
 
 /**
@@ -183,9 +175,10 @@ static inline void gpio_ll_intr_disable(gpio_dev_t *hw, gpio_num_t gpio_num)
   * @param hw Peripheral GPIO hardware instance address.
   * @param gpio_num GPIO number
   */
+__attribute__((always_inline))
 static inline void gpio_ll_input_disable(gpio_dev_t *hw, gpio_num_t gpio_num)
 {
-    PIN_INPUT_DISABLE(GPIO_PIN_MUX_REG[gpio_num]);
+    PIN_INPUT_DISABLE(IO_MUX_GPIO0_REG + (gpio_num * 4));
 }
 
 /**
@@ -205,6 +198,7 @@ static inline void gpio_ll_input_enable(gpio_dev_t *hw, gpio_num_t gpio_num)
   * @param hw Peripheral GPIO hardware instance address.
   * @param gpio_num GPIO number
   */
+__attribute__((always_inline))
 static inline void gpio_ll_output_disable(gpio_dev_t *hw, gpio_num_t gpio_num)
 {
     hw->enable_w1tc.enable_w1tc = (0x1 << gpio_num);
@@ -244,6 +238,22 @@ static inline void gpio_ll_od_disable(gpio_dev_t *hw, gpio_num_t gpio_num)
 static inline void gpio_ll_od_enable(gpio_dev_t *hw, gpio_num_t gpio_num)
 {
     hw->pin[gpio_num].pad_driver = 1;
+}
+
+/**
+ * @brief  Select a function for the pin in the IOMUX
+ *
+ * @param  hw Peripheral GPIO hardware instance address.
+ * @param  gpio_num GPIO number
+ * @param  func Function to assign to the pin
+ */
+static inline __attribute__((always_inline)) void gpio_ll_func_sel(gpio_dev_t *hw, uint8_t gpio_num, uint32_t func)
+{
+    // Disable USB Serial JTAG if pins 18 or pins 19 needs to select an IOMUX function
+    if (gpio_num == 18 || gpio_num == 19) {
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
+    }
+    PIN_FUNC_SELECT(IO_MUX_GPIO0_REG + (gpio_num * 4), func);
 }
 
 /**
@@ -324,7 +334,7 @@ static inline void gpio_ll_set_drive_capability(gpio_dev_t *hw, gpio_num_t gpio_
   */
 static inline void gpio_ll_get_drive_capability(gpio_dev_t *hw, gpio_num_t gpio_num, gpio_drive_cap_t *strength)
 {
-    *strength = GET_PERI_REG_BITS2(GPIO_PIN_MUX_REG[gpio_num], FUN_DRV_V, FUN_DRV_S);
+    *strength = (gpio_drive_cap_t)GET_PERI_REG_BITS2(GPIO_PIN_MUX_REG[gpio_num], FUN_DRV_V, FUN_DRV_S);
 }
 
 /**
@@ -334,6 +344,7 @@ static inline void gpio_ll_get_drive_capability(gpio_dev_t *hw, gpio_num_t gpio_
   */
 static inline void gpio_ll_deep_sleep_hold_en(gpio_dev_t *hw)
 {
+    CLEAR_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_FORCE_UNHOLD);
     SET_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_AUTOHOLD_EN_M);
 }
 
@@ -344,7 +355,22 @@ static inline void gpio_ll_deep_sleep_hold_en(gpio_dev_t *hw)
   */
 static inline void gpio_ll_deep_sleep_hold_dis(gpio_dev_t *hw)
 {
-    SET_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_CLR_DG_PAD_AUTOHOLD);
+    CLEAR_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_AUTOHOLD_EN_M);
+}
+
+/**
+ * @brief  Get deep sleep hold status
+ *
+ * @param  hw Peripheral GPIO hardware instance address.
+ *
+ * @return
+ *     - true  deep sleep hold is enabled
+ *     - false deep sleep hold is disabled
+ */
+__attribute__((always_inline))
+static inline bool gpio_ll_deep_sleep_hold_is_en(gpio_dev_t *hw)
+{
+    return !GET_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_FORCE_UNHOLD) && GET_PERI_REG_MASK(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_AUTOHOLD_EN_M);
 }
 
 /**
@@ -378,6 +404,24 @@ static inline void gpio_ll_hold_dis(gpio_dev_t *hw, gpio_num_t gpio_num)
 }
 
 /**
+  * @brief Get digital gpio pad hold status.
+  *
+  * @param hw Peripheral GPIO hardware instance address.
+  * @param gpio_num GPIO number, only support output GPIOs
+  *
+  * @note caller must ensure that gpio_num is a digital io pad
+  *
+  * @return
+  *     - true  digital gpio pad is held
+  *     - false digital gpio pad is unheld
+  */
+__attribute__((always_inline))
+static inline bool gpio_ll_is_digital_io_hold(gpio_dev_t *hw, uint32_t gpio_num)
+{
+    return GET_PERI_REG_MASK(RTC_CNTL_DIG_PAD_HOLD_REG, BIT(gpio_num));
+}
+
+/**
   * @brief Set pad input to a peripheral signal through the IOMUX.
   *
   * @param hw Peripheral GPIO hardware instance address.
@@ -396,10 +440,11 @@ static inline void gpio_ll_iomux_in(gpio_dev_t *hw, uint32_t gpio, uint32_t sign
  * @param  pin_name Pin name to configure
  * @param  func Function to assign to the pin
  */
-static inline void gpio_ll_iomux_func_sel(uint32_t pin_name, uint32_t func)
+static inline __attribute__((always_inline)) void gpio_ll_iomux_func_sel(uint32_t pin_name, uint32_t func)
 {
+    // Disable USB Serial JTAG if pins 18 or pins 19 needs to select an IOMUX function
     if (pin_name == IO_MUX_GPIO18_REG || pin_name == IO_MUX_GPIO19_REG) {
-        CLEAR_PERI_REG_MASK(USB_DEVICE_CONF0_REG, USB_DEVICE_USB_PAD_ENABLE);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE);
     }
     PIN_FUNC_SELECT(pin_name, func);
 }

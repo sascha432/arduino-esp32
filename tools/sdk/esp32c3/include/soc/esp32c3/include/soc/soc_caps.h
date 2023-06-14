@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // The long term plan is to have a single soc_caps.h for each peripheral.
 // During the refactoring and multichip support development process, we
 // seperate these information into periph_caps.h for each peripheral and
@@ -6,6 +12,8 @@
 #pragma once
 
 #define SOC_CPU_CORES_NUM               1
+#define SOC_ADC_SUPPORTED               1
+#define SOC_DEDICATED_GPIO_SUPPORTED    1
 #define SOC_GDMA_SUPPORTED              1
 #define SOC_TWAI_SUPPORTED              1
 #define SOC_BT_SUPPORTED                1
@@ -14,12 +22,15 @@
 #define SOC_ASYNC_MEMCPY_SUPPORTED      1
 #define SOC_USB_SERIAL_JTAG_SUPPORTED   1
 #define SOC_TEMP_SENSOR_SUPPORTED       1
-#define SOC_FLASH_ENCRYPTION_XTS_AES      1
+#define SOC_FLASH_ENCRYPTION_XTS_AES    1
+#define SOC_XT_WDT_SUPPORTED            1
+
 
 /*-------------------------- COMMON CAPS ---------------------------------------*/
 #define SOC_SUPPORTS_SECURE_DL_MODE     1
 #define SOC_EFUSE_SECURE_BOOT_KEY_DIGESTS 3
 #define SOC_EFUSE_REVOKE_BOOT_KEY_DIGESTS 1
+#define SOC_EFUSE_HAS_EFUSE_RST_BUG       1
 
 
 /*-------------------------- AES CAPS -----------------------------------------*/
@@ -32,18 +43,32 @@
 #define SOC_AES_SUPPORT_AES_256 (1)
 
 /*-------------------------- ADC CAPS -------------------------------*/
+/*!< SAR ADC Module*/
+#define SOC_ADC_DIG_CTRL_SUPPORTED              1
+#define SOC_ADC_ARBITER_SUPPORTED               1
+#define SOC_ADC_FILTER_SUPPORTED                1
+#define SOC_ADC_MONITOR_SUPPORTED               1
 #define SOC_ADC_PERIPH_NUM                      (2)
-#define SOC_ADC_PATT_LEN_MAX                    (16)
 #define SOC_ADC_CHANNEL_NUM(PERIPH_NUM)         ((PERIPH_NUM==0)? 5 : 1)
 #define SOC_ADC_MAX_CHANNEL_NUM                 (5)
-#define SOC_ADC_MAX_BITWIDTH                    (12)
+
+/*!< Digital */
+#define SOC_ADC_DIGI_CONTROLLER_NUM             (1U)
+#define SOC_ADC_PATT_LEN_MAX                    (8) /*!< One pattern table, each contains 8 items. Each item takes 1 byte */
+#define SOC_ADC_DIGI_MAX_BITWIDTH               (12)
+#define SOC_ADC_DIGI_RESULT_BYTES               (4)
+#define SOC_ADC_DIGI_DATA_BYTES_PER_CONV        (4)
 #define SOC_ADC_DIGI_FILTER_NUM                 (2)
 #define SOC_ADC_DIGI_MONITOR_NUM                (2)
-#define SOC_ADC_HW_CALIBRATION_V1               (1) /*!< support HW offset calibration */
-#define SOC_ADC_SUPPORT_DMA_MODE(PERIPH_NUM)    1
-//F_sample = F_digi_con / 2 / interval. F_digi_con = 5M for now. 30 <= interva <= 4095
+/*!< F_sample = F_digi_con / 2 / interval. F_digi_con = 5M for now. 30 <= interva <= 4095 */
 #define SOC_ADC_SAMPLE_FREQ_THRES_HIGH          83333
 #define SOC_ADC_SAMPLE_FREQ_THRES_LOW           611
+
+/*!< RTC */
+#define SOC_ADC_MAX_BITWIDTH                    (12)
+
+/*!< Calibration */
+#define SOC_ADC_CALIBRATION_V1_SUPPORTED        (1) /*!< support HW offset calibration version 1*/
 
 /*-------------------------- APB BACKUP DMA CAPS -------------------------------*/
 #define SOC_APB_BACKUP_DMA              (1)
@@ -91,8 +116,16 @@
 #define SOC_GPIO_VALID_OUTPUT_GPIO_MASK SOC_GPIO_VALID_GPIO_MASK
 #define SOC_GPIO_DEEP_SLEEP_WAKEUP_VALID_GPIO_MASK        (0ULL | BIT0 | BIT1 | BIT2 | BIT3 | BIT4 | BIT5)
 
+// digital I/O pad powered by VDD3P3_CPU or VDD_SPI(GPIO_NUM_6~GPIO_NUM_21)
+#define SOC_GPIO_VALID_DIGITAL_IO_PAD_MASK 0x00000000003FFFC0ULL
+
 // Support to configure sleep status
 #define SOC_GPIO_SUPPORT_SLP_SWITCH  (1)
+
+/*-------------------------- Dedicated GPIO CAPS -----------------------------*/
+#define SOC_DEDIC_GPIO_OUT_CHANNELS_NUM (8) /*!< 8 outward channels on each CPU core */
+#define SOC_DEDIC_GPIO_IN_CHANNELS_NUM  (8) /*!< 8 inward channels on each CPU core */
+#define SOC_DEDIC_PERIPH_AUTO_ENABLE    (1) /*!< The dedicated GPIO peripheral is enabled automatically */
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
 // ESP32-C3 have 2 I2C.
@@ -100,7 +133,7 @@
 
 #define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
 
-#define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
+// FSM_RST only resets the FSM, not using it. So SOC_I2C_SUPPORT_HW_FSM_RST not defined.
 #define SOC_I2C_SUPPORT_HW_CLR_BUS  (1)
 
 #define SOC_I2C_SUPPORT_XTAL        (1)
@@ -108,11 +141,10 @@
 
 /*-------------------------- I2S CAPS ----------------------------------------*/
 #define SOC_I2S_NUM                 (1)
-
-#define SOC_I2S_APLL_MIN_FREQ       (250000000)
-#define SOC_I2S_APLL_MAX_FREQ       (500000000)
-#define SOC_I2S_APLL_MIN_RATE       (10675) //in Hz, I2S Clock rate limited by hardware
-#define SOC_I2S_MAX_BUFFER_SIZE     (4 * 1024 * 1024) //the maximum RAM can be allocated
+#define SOC_I2S_SUPPORTS_PCM        (1)
+#define SOC_I2S_SUPPORTS_PDM_TX     (1)
+#define SOC_I2S_SUPPORTS_PDM_CODEC  (1)
+#define SOC_I2S_SUPPORTS_TDM        (1)
 
 /*-------------------------- LEDC CAPS ---------------------------------------*/
 #define SOC_LEDC_SUPPORT_XTAL_CLOCK  (1)
@@ -146,10 +178,12 @@
 
 #define SOC_RTC_CNTL_CPU_PD_RETENTION_MEM_SIZE  (SOC_RTC_CNTL_CPU_PD_REG_FILE_NUM * (SOC_RTC_CNTL_CPU_PD_DMA_BUS_WIDTH >> 3))
 
+#define SOC_RTC_SLOW_CLOCK_SUPPORT_8MD256       (1)
+
 /*-------------------------- RTCIO CAPS --------------------------------------*/
 /* No dedicated RTCIO subsystem on ESP32-C3. RTC functions are still supported
  * for hold, wake & 32kHz crystal functions - via rtc_cntl_reg */
-#define SOC_RTCIO_PIN_COUNT    0
+#define SOC_RTCIO_PIN_COUNT    (0U)
 
 /*--------------------------- RSA CAPS ---------------------------------------*/
 #define SOC_RSA_MAX_BIT_LEN    (3072)
@@ -181,6 +215,7 @@
 /*-------------------------- SPI CAPS ----------------------------------------*/
 #define SOC_SPI_PERIPH_NUM          2
 #define SOC_SPI_PERIPH_CS_NUM(i)    6
+#define SOC_SPI_MAX_CS_NUM          6
 
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE     64
 
@@ -239,7 +274,6 @@
 /*-------------------------- UART CAPS ---------------------------------------*/
 // ESP32-C3 has 2 UARTs
 #define SOC_UART_NUM                (2)
-
 #define SOC_UART_FIFO_LEN           (128)      /*!< The UART hardware FIFO length */
 #define SOC_UART_BITRATE_MAX        (5000000)  /*!< Max bit rate supported by UART */
 

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 /**
  *                    ESP32-C3 Linker Script Memory Layout
  * This file describes the memory layout (memory blocks) by virtual memory addresses.
@@ -11,6 +16,17 @@
  */
        
 /* List of deprecated options */
+/*
+ * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/* CPU instruction prefetch padding size for flash mmap scenario */
+_esp_flash_mmap_prefetch_pad_size = 16;
+/* CPU instruction prefetch padding size for memory protection scenario */
+_esp_memprot_prefetch_pad_size = 16;
+/* Memory alignment size for PMS */
+_esp_memprot_align_size = 512;
 MEMORY
 {
   /**
@@ -40,7 +56,7 @@ MEMORY
   /**
    * RTC fast memory (executable). Persists over deep sleep.
    */
-  rtc_iram_seg(RWX) : org = 0x50000000, len = 0x2000 - 0
+  rtc_iram_seg(RWX) : org = 0x50000000, len = 0x2000 - (0x10)
 }
 _static_data_end = _bss_end;
 /* Heap ends at top of dram0_0_seg */

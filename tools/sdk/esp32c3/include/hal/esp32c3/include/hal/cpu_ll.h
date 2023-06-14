@@ -1,16 +1,8 @@
-// Copyright 2020 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #pragma once
 
 #include <stdint.h>
@@ -22,11 +14,17 @@
 #include "soc/assist_debug_reg.h"
 #include "esp_attr.h"
 #include "riscv/csr.h"
+#include "riscv/semihosting.h"
 
 /*performance counter*/
 #define CSR_PCER_MACHINE    0x7e0
 #define CSR_PCMR_MACHINE    0x7e1
 #define CSR_PCCR_MACHINE    0x7e2
+
+/*fast gpio*/
+#define CSR_GPIO_OEN_USER   0x803
+#define CSR_GPIO_IN_USER    0x804
+#define CSR_GPIO_OUT_USER   0x805
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,8 +72,29 @@ static inline void cpu_ll_init_hwloop(void)
     // Nothing needed here for ESP32-C3
 }
 
+FORCE_INLINE_ATTR bool cpu_ll_is_debugger_attached(void)
+{
+    return REG_GET_BIT(ASSIST_DEBUG_CORE_0_DEBUG_MODE_REG, ASSIST_DEBUG_CORE_0_DEBUG_MODULE_ACTIVE);
+}
+
 static inline void cpu_ll_set_breakpoint(int id, uint32_t pc)
 {
+    if (cpu_ll_is_debugger_attached()) {
+        /* If we want to set breakpoint which when hit transfers control to debugger
+         * we need to set `action` in `mcontrol` to 1 (Enter Debug Mode).
+         * That `action` value is supported only when `dmode` of `tdata1` is set.
+         * But `dmode` can be modified by debugger only (from Debug Mode).
+         *
+         * So when debugger is connected we use special syscall to ask it to set breakpoint for us.
+         */
+        long args[] = {true, id, (long)pc};
+        int ret = semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args);
+        if (ret == 0) {
+            return;
+        }
+    }
+    /* The code bellow sets breakpoint which will trigger `Breakpoint` exception
+     * instead transfering control to debugger. */
     RV_WRITE_CSR(tselect,id);
     RV_SET_CSR(CSR_TCONTROL,TCONTROL_MTE);
     RV_SET_CSR(CSR_TDATA1, TDATA1_USER|TDATA1_MACHINE|TDATA1_EXECUTE);
@@ -85,6 +104,14 @@ static inline void cpu_ll_set_breakpoint(int id, uint32_t pc)
 
 static inline void cpu_ll_clear_breakpoint(int id)
 {
+    if (cpu_ll_is_debugger_attached()) {
+        /* see description in cpu_ll_set_breakpoint()  */
+        long args[] = {false, id};
+        int ret = semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args);
+        if (ret == 0){
+            return;
+        }
+    }
     RV_WRITE_CSR(tselect,id);
     RV_CLEAR_CSR(CSR_TCONTROL,TCONTROL_MTE);
     RV_CLEAR_CSR(CSR_TDATA1, TDATA1_USER|TDATA1_MACHINE|TDATA1_EXECUTE);
@@ -108,6 +135,17 @@ static inline void cpu_ll_set_watchpoint(int id,
                                         bool on_write)
 {
     uint32_t addr_napot;
+
+    if (cpu_ll_is_debugger_attached()) {
+        /* see description in cpu_ll_set_breakpoint()  */
+        long args[] = {true, id, (long)addr, (long)size,
+            (long)((on_read ? ESP_SEMIHOSTING_WP_FLG_RD : 0) | (on_write ? ESP_SEMIHOSTING_WP_FLG_WR : 0))};
+        int ret = semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args);
+        if (ret == 0) {
+            return;
+        }
+    }
+
     RV_WRITE_CSR(tselect,id);
     RV_SET_CSR(CSR_TCONTROL, TCONTROL_MPTE | TCONTROL_MTE);
     RV_SET_CSR(CSR_TDATA1, TDATA1_USER|TDATA1_MACHINE);
@@ -126,6 +164,14 @@ static inline void cpu_ll_set_watchpoint(int id,
 
 static inline void cpu_ll_clear_watchpoint(int id)
 {
+    if (cpu_ll_is_debugger_attached()) {
+        /* see description in cpu_ll_set_breakpoint()  */
+        long args[] = {false, id};
+        int ret = semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args);
+        if (ret == 0){
+            return;
+        }
+    }
     RV_WRITE_CSR(tselect,id);
     RV_CLEAR_CSR(CSR_TCONTROL,TCONTROL_MTE);
     RV_CLEAR_CSR(CSR_TDATA1, TDATA1_USER|TDATA1_MACHINE);
@@ -133,11 +179,6 @@ static inline void cpu_ll_clear_watchpoint(int id)
     RV_CLEAR_CSR(CSR_TDATA1, TDATA1_MACHINE);
     RV_CLEAR_CSR(CSR_TDATA1, TDATA1_LOAD|TDATA1_STORE|TDATA1_EXECUTE);
     return;
-}
-
-FORCE_INLINE_ATTR bool cpu_ll_is_debugger_attached(void)
-{
-    return REG_GET_BIT(ASSIST_DEBUG_C0RE_0_DEBUG_MODE_REG, ASSIST_DEBUG_CORE_0_DEBUG_MODULE_ACTIVE);
 }
 
 static inline void cpu_ll_break(void)
@@ -161,6 +202,34 @@ static inline void cpu_ll_waiti(void)
         return;
     }
     asm volatile ("wfi\n");
+}
+
+static inline void cpu_ll_enable_dedic_gpio_output(uint32_t mask)
+{
+    RV_WRITE_CSR(CSR_GPIO_OEN_USER, mask);
+}
+
+static inline void cpu_ll_write_dedic_gpio_all(uint32_t value)
+{
+    RV_WRITE_CSR(CSR_GPIO_OUT_USER, value);
+}
+
+static inline uint32_t cpu_ll_read_dedic_gpio_in(void)
+{
+    uint32_t value = RV_READ_CSR(CSR_GPIO_IN_USER);
+    return value;
+}
+
+static inline uint32_t cpu_ll_read_dedic_gpio_out(void)
+{
+    uint32_t value = RV_READ_CSR(CSR_GPIO_OUT_USER);
+    return value;
+}
+
+static inline void cpu_ll_write_dedic_gpio_mask(uint32_t mask, uint32_t value)
+{
+    RV_SET_CSR(CSR_GPIO_OUT_USER, mask & value);
+    RV_CLEAR_CSR(CSR_GPIO_OUT_USER, mask & ~(value));
 }
 
 #ifdef __cplusplus

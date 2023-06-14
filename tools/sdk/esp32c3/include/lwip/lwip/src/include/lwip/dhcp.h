@@ -151,6 +151,9 @@ u8_t dhcp_supplied_address(const struct netif *netif);
 void dhcp_coarse_tmr(void);
 /* to be called every half second */
 void dhcp_fine_tmr(void);
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+void dhcp_fine_timeout_cb(void *arg);
+#endif
 
 #if LWIP_DHCP_GET_NTP_SRV
 /** This function must exist, in other to add offered NTP servers to
@@ -158,6 +161,11 @@ void dhcp_fine_tmr(void);
  * See LWIP_DHCP_MAX_NTP_SERVERS */
 extern void dhcp_set_ntp_servers(u8_t num_ntp_servers, const ip4_addr_t* ntp_server_addrs);
 #endif /* LWIP_DHCP_GET_NTP_SRV */
+
+#if ESP_DHCP && !ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER
+err_t dhcp_set_vendor_class_identifier(u8_t len, char *str);
+err_t dhcp_get_vendor_specific_information(u8_t len, char *str);
+#endif /* ESP_DHCP && !ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER */
 
 #define netif_dhcp_data(netif) ((struct dhcp*)netif_get_client_data(netif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP))
 
