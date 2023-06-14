@@ -7,7 +7,7 @@
 #define NUM_DIGITAL_PINS        40
 #define NUM_ANALOG_INPUTS       16
 
-#define analogInputToDigitalPin(p)  (((p)<20)?(esp32_adc2gpio[(p)]):-1)
+#define analogInputToDigitalPin(p)  (((p)<20)?(analogChannelToDigitalPin(p)):-1)
 #define digitalPinToInterrupt(p)    (((p)<40)?(p):-1)
 #define digitalPinHasPWM(p)         (p < 34)
 
@@ -21,6 +21,7 @@ static const uint8_t SDA = 21;
 static const uint8_t SCL = 22;
 static const uint8_t I2C_INT = 4;
 
+#define WIRE1_PIN_DEFINED 1             // See Wire.cpp at bool TwoWire::initPins(int sdaPin, int sclPin)
 static const uint8_t SDA1 = 26;
 static const uint8_t SCL1 = 25;
 

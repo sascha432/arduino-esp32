@@ -830,7 +830,7 @@ typedef union {
         uint32_t bbleerr: 1;
         uint32_t nakintrpt: 1;
         uint32_t nyetintrpt: 1;
-        uint32_t reserved16: 16;
+        uint32_t reserved15: 17;
     };
     uint32_t val;
 } usb_diepint_reg_t;
@@ -1153,7 +1153,9 @@ typedef struct {
 } usbh_dev_t;
 
 
-_Static_assert(sizeof(usbh_dev_t) == 0xe08, "USB new struct should be 0xe08 large");
+#ifndef __cplusplus
+_Static_assert(sizeof(usbh_dev_t) == 0xe08, "Invalid size of usb_dwc_dev_t structure");
+#endif
 
 extern usbh_dev_t USBH;
 
