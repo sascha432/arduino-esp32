@@ -555,188 +555,110 @@ class String {
             return endsWithIgnoreCase(reinterpret_cast<PGM_P>(suffix));
         }
 
-
-        // // search
-        // int indexOf(char ch, unsigned int fromIndex = 0) const;
-        // int indexOf(const char *str, unsigned int fromIndex = 0) const;
-        // int indexOf(const __FlashStringHelper *str, unsigned int fromIndex = 0) const {
-        //     return indexOf((const char*)str, fromIndex);
-        // }
-        // int indexOf(const String &str, unsigned int fromIndex = 0) const;
-        // int lastIndexOf(char ch) const;
-        // int lastIndexOf(char ch, unsigned int fromIndex) const;
-        // int lastIndexOf(const String &str) const;
-        // int lastIndexOf(const String &str, unsigned int fromIndex) const;
-
     // internal search functions
     protected:
-        // findLength is optional, provide only if available
-        int _indexOf(const char *find, size_t fromIndex, size_t findLength = ~0) const
+        int _indexOf(PGM_P findStr, size_t findLen) const
         {
-            size_t len;
-            if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
-                return -1;
-            }
-            auto ptr = buffer();
-            auto idxPtr = strstr(ptr + fromIndex, find);
-            if (!idxPtr) {
-                return -1;
-            }
-            return idxPtr - ptr;
+            return _indexOf(findStr, 0, findLen);
         }
 
-        int _indexOfIgnoreCase(const char *find, size_t fromIndex, size_t findLength = ~0) const
+        int _indexOf(PGM_P findStr, unsigned int fromIndex, size_t findLen) const
         {
-            size_t len;
-            if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
+            if(fromIndex >= len())
                 return -1;
-            }
-            auto ptr = buffer();
-            auto idxPtr = stristr(ptr + fromIndex, find);
-            if (!idxPtr) {
+            const char *found = strstr(buffer() + fromIndex, findStr);
+            if(found == NULL)
                 return -1;
-            }
-            return idxPtr - ptr;
+            return found - buffer();
         }
 
-        // int _indexOf_P(PGM_P find, size_t fromIndex, size_t findLength = ~0) const
-        // {
-        //     size_t len;
-        //     if (!find || !findLength || ((len = length()) == 0) || (findLength != ~0U && (fromIndex + findLength >= len))) {
-        //         return -1;
-        //     }
-        //     auto ptr = buffer();
-        //     auto idxPtr = strstr_P(ptr + fromIndex, find);
-        //     if (!idxPtr) {
-        //         return -1;
-        //     }
-        //     return idxPtr - ptr;
-        // }
-
-        // int _indexOfIgnoreCase_P(PGM_P find, size_t fromIndex, size_t findLength) const
-        // {
-        //     size_t len;
-        //     if (!find || !findLength || ((len = length()) == 0) || (fromIndex + findLength >= len)) {
-        //         return -1;
-        //     }
-        //     auto ptr = buffer();
-        //     auto idxPtr = stristr_P(const_cast<char *>(ptr) + fromIndex, find, findLength);
-        //     if (!idxPtr) {
-        //         return -1;
-        //     }
-        //     return idxPtr - ptr;
-        // }
-
-        int _lastIndexOf(char find) const
+        int _indexOfIgnoreCase(PGM_P findStr, unsigned int fromIndex, size_t findLen) const
         {
-            auto ptr = strrchr(buffer(), find);
-            if (!ptr) {
+            if(findLen == 0 || len() == 0 || findLen > len())
                 return -1;
+            if(fromIndex >= len())
+                fromIndex = len() - 1;
+            int found = -1;
+            for(char *p = wbuffer(); p <= wbuffer() + fromIndex; p++) {
+                p = stristr(p, findStr);
+                if(!p)
+                    break;
+                if((unsigned int) (p - wbuffer()) <= fromIndex)
+                    found = p - buffer();
             }
-            return ptr - buffer();
+            return found;
         }
 
-        // int _lastIndexOf_P(char find) const
-        // {
-        //     auto ptr = strrchr_P(buffer(), find);
-        //     if (!ptr) {
-        //         return -1;
-        //     }
-        //     return ptr - buffer();
-        // }
-
-        int _lastIndexOf(char find, size_t fromIndex) const
+        int _lastIndexOf(char theChar) const
         {
-            if (!find) {
-                return -1;
-            }
-            auto len = length();
-            if (fromIndex == ~0U) {
-                fromIndex = len;
-            }
-            else if (fromIndex > len || fromIndex < 1) {
-                return -1;
-            }
-            auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
-            if (!ptr) {
-                return -1;
-            }
-            return ptr - buffer();
+            return _lastIndexOf(theChar, len() - 1);
         }
 
-        // int _lastIndexOf_P(char find, size_t fromIndex) const
-        // {
-        //     if (!find) {
-        //         return -1;
-        //     }
-        //     auto len = length();
-        //     if (fromIndex == ~0U) {
-        //         fromIndex = len;
-        //     }
-        //     else if (fromIndex > len || fromIndex < 1) {
-        //         return -1;
-        //     }
-        //     auto ptr = reinterpret_cast<const char *>(memrchr(buffer(), find, fromIndex));
-        //     if (!ptr) {
-        //         return -1;
-        //     }
-        //     return ptr - buffer();
-        // }
-
-        // int _lastIndexOf_P(PGM_P find, size_t fromIndex, size_t findLen) const
-        // {
-        //     size_t len;
-        //     if (!find || !(len = length())) {
-        //         return -1;
-        //     }
-        //     if (fromIndex == ~0U) {
-        //         fromIndex = len;
-        //     }
-        //     else if (fromIndex < findLen || fromIndex > len) {
-        //         return -1;
-        //     }
-        //     auto ptr = __strrstr_P(const_cast<char *>(buffer()), fromIndex + findLen, find, findLen);
-        //     if (!ptr) {
-        //         return -1;
-        //     }
-        //     return ptr - buffer();
-        // }
-
-        int _lastIndexOf(const char *find, size_t fromIndex, size_t findLen) const
+        int _lastIndexOf(char ch, unsigned int fromIndex) const
         {
-            size_t len;
-            if (!find || !(len = length())) {
+            if(fromIndex >= len())
                 return -1;
-            }
-            if (fromIndex == ~0U) {
-                fromIndex = len;
-            }
-            else if (fromIndex < findLen || fromIndex > len) {
+            char tempchar = buffer()[fromIndex + 1];
+            wbuffer()[fromIndex + 1] = '\0';
+            char* temp = strrchr(wbuffer(), ch);
+            wbuffer()[fromIndex + 1] = tempchar;
+            if(temp == NULL)
                 return -1;
-            }
-            auto ptr = __strrstr(const_cast<char *>(buffer()), fromIndex + findLen, find, findLen);
-            if (!ptr) {
-                return -1;
-            }
-            return ptr - buffer();
+            return temp - buffer();
         }
 
+        int _lastIndexOf(PGM_P findStr, unsigned int fromIndex, size_t findLen) const
+        {
+            if(findLen == 0 || len() == 0 || findLen > len())
+                return -1;
+            if(fromIndex >= len())
+                fromIndex = len() - 1;
+            int found = -1;
+            for(char *p = wbuffer(); p <= wbuffer() + fromIndex; p++) {
+                p = strstr(p, findStr);
+                if(!p)
+                    break;
+                if((unsigned int) (p - wbuffer()) <= fromIndex)
+                    found = p - buffer();
+            }
+            return found;
+        }
 
     // additional indexOf methods with ignore case and support for char, const char *, const __FlashStringHelper * and String
     public:
         // search
-        int indexOf(char ch, unsigned int fromIndex = 0) const;
-        int indexOf(const String &str, unsigned int fromIndex = 0) const;
-
-        int indexOf(const char *str, unsigned int fromIndex = 0) const {
-            return _indexOf(str, fromIndex, ~0U);
+        int indexOf(char ch, unsigned int fromIndex = 0) const
+        {
+            if(fromIndex >= len())
+                return -1;
+            const char *temp = strchr(buffer() + fromIndex, ch);
+            if(temp == NULL)
+                return -1;
+            return temp - buffer();
         }
-        int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
+
+        int indexOf(const String &s2, unsigned int fromIndex = 0) const
+        {
+            if(fromIndex >= len())
+                return -1;
+            const char *found = strstr(buffer() + fromIndex, s2.buffer());
+            if(found == NULL)
+                return -1;
+            return found - buffer();
+        }
+
+        int indexOf(const char *str, unsigned int fromIndex = 0) const
+        {
+            return _indexOf(str, fromIndex, strlen(str));
+        }
+
+        int indexOf(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const
+        {
             return indexOf(reinterpret_cast<PGM_P>(fstr), fromIndex);
         }
 
-
-        int indexOfIgnoreCase(char ch, unsigned int fromIndex = 0) const {
+        int indexOfIgnoreCase(char ch, unsigned int fromIndex = 0) const
+        {
             if (fromIndex >= len())
                 return -1;
             const char *temp = strichr(buffer() + fromIndex, ch);
@@ -745,37 +667,51 @@ class String {
             return temp - buffer();
         }
 
-
-        int indexOfIgnoreCase(const char *str, unsigned int fromIndex = 0) const {
-            return _indexOfIgnoreCase(str, fromIndex, ~0U);
+        int indexOfIgnoreCase(const char *str, unsigned int fromIndex = 0) const
+        {
+            return _indexOfIgnoreCase(str, fromIndex, strlen(str));
         }
-        int indexOfIgnoreCase(const String &str, unsigned int fromIndex = 0) const {
+
+        int indexOfIgnoreCase(const String &str, unsigned int fromIndex = 0) const
+        {
             return _indexOfIgnoreCase(str.c_str(), fromIndex, str.length());
         }
-        int indexOfIgnoreCase(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const {
+
+        int indexOfIgnoreCase(const __FlashStringHelper *fstr, unsigned int fromIndex = 0) const
+        {
             return indexOfIgnoreCase(reinterpret_cast<PGM_P>(fstr), fromIndex);
         }
 
-
-        int lastIndexOf(char ch) const {
+        int lastIndexOf(char ch) const
+        {
             return _lastIndexOf(ch);
         }
-        int lastIndexOf(char ch, unsigned int fromIndex) const {
+
+        int lastIndexOf(char ch, unsigned int fromIndex) const
+        {
             return _lastIndexOf(ch, fromIndex);
         }
-        int lastIndexOf(const String &str) const {
+
+        int lastIndexOf(const String &str) const
+        {
             auto strLen = str.length();
             return _lastIndexOf(str.buffer(), length() - strLen, strLen);
         }
-        int lastIndexOf(const String &str, unsigned int fromIndex) const {
+
+        int lastIndexOf(const String &str, unsigned int fromIndex) const
+        {
             auto findLength = str.length();
             return _lastIndexOf(str.buffer(), fromIndex - findLength, findLength);
         }
-        int lastIndexOf(const char *str, unsigned int fromIndex) const {
+
+        int lastIndexOf(const char *str, unsigned int fromIndex) const
+        {
             auto findLength = strlen(str);
             return _lastIndexOf(str, fromIndex - findLength, findLength);
         }
-        int lastIndexOf(const __FlashStringHelper *str, unsigned int fromIndex) const {
+
+        int lastIndexOf(const __FlashStringHelper *str, unsigned int fromIndex) const
+        {
             return lastIndexOf(reinterpret_cast<PGM_P>(str), fromIndex);
         }
 

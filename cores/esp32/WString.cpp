@@ -565,68 +565,6 @@ void String::getBytes(unsigned char *buf, unsigned int bufsize, unsigned int ind
 /*  Search                                   */
 /*********************************************/
 
-// int String::indexOf(char c) const {
-//     return indexOf(c, 0);
-// }
-
-int String::indexOf(char ch, unsigned int fromIndex) const {
-    if(fromIndex >= len())
-        return -1;
-    const char *temp = strchr(buffer() + fromIndex, ch);
-    if(temp == NULL)
-        return -1;
-    return temp - buffer();
-}
-
-// int String::indexOf(const String &s2) const {
-//     return indexOf(s2, 0);
-// }
-
-int String::indexOf(const String &s2, unsigned int fromIndex) const {
-    if(fromIndex >= len())
-        return -1;
-    const char *found = strstr(buffer() + fromIndex, s2.buffer());
-    if(found == NULL)
-        return -1;
-    return found - buffer();
-}
-
-// int String::lastIndexOf(char theChar) const {
-//     return lastIndexOf(theChar, len() - 1);
-// }
-
-// int String::lastIndexOf(char ch, unsigned int fromIndex) const {
-//     if(fromIndex >= len())
-//         return -1;
-//     char tempchar = buffer()[fromIndex + 1];
-//     wbuffer()[fromIndex + 1] = '\0';
-//     char* temp = strrchr(wbuffer(), ch);
-//     wbuffer()[fromIndex + 1] = tempchar;
-//     if(temp == NULL)
-//         return -1;
-//     return temp - buffer();
-// }
-
-// int String::lastIndexOf(const String &s2) const {
-//     return lastIndexOf(s2, len() - s2.len());
-// }
-
-// int String::lastIndexOf(const String &s2, unsigned int fromIndex) const {
-//     if(s2.len() == 0 || len() == 0 || s2.len() > len())
-//         return -1;
-//     if(fromIndex >= len())
-//         fromIndex = len() - 1;
-//     int found = -1;
-//     for(char *p = wbuffer(); p <= wbuffer() + fromIndex; p++) {
-//         p = strstr(p, s2.buffer());
-//         if(!p)
-//             break;
-//         if((unsigned int) (p - wbuffer()) <= fromIndex)
-//             found = p - buffer();
-//     }
-//     return found;
-// }
-
 String String::substring(unsigned int left, unsigned int right) const {
     if(left > right) {
         unsigned int temp = right;
@@ -675,51 +613,50 @@ bool String::replace(char find, char replace)
     return true;
 }
 
-bool String::_replace(PGM_P find, size_t findLen, PGM_P replace, size_t replaceLen)
+bool String::_replace(PGM_P findStr, size_t findLen, PGM_P replaceStr, size_t replaceLen)
 {
-    if (length() == 0 || findLen == 0 || !find) {
+    if(len() == 0 || findLen == 0)
         return false;
-    }
     int diff = replaceLen - findLen;
     char *readFrom = wbuffer();
     char *foundAt;
-    if (diff == 0) {
-        while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
-            memmove(foundAt, replace, replaceLen);
+    if(diff == 0) {
+        while((foundAt = strstr(readFrom, findStr)) != NULL) {
+            memmove(foundAt, replaceStr, replaceLen);
             readFrom = foundAt + replaceLen;
         }
-    }
-    else if (diff < 0) {
+    } else if(diff < 0) {
         char *writeTo = wbuffer();
-        while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
+        unsigned int l = len();
+        while((foundAt = strstr(readFrom, findStr)) != NULL) {
             unsigned int n = foundAt - readFrom;
             memmove(writeTo, readFrom, n);
             writeTo += n;
-            memmove(writeTo, replace, replaceLen);
+            memmove(writeTo, replaceStr, replaceLen);
             writeTo += replaceLen;
             readFrom = foundAt + findLen;
-            setLen(len() + diff);
+            l += diff;
         }
         memmove(writeTo, readFrom, strlen(readFrom) + 1);
-    }
-    else {
+        setLen(l);
+    } else {
         unsigned int size = len(); // compute size needed for result
-        while ((foundAt = strstr_P(readFrom, find)) != nullptr) {
+        while((foundAt = strstr(readFrom, findStr)) != NULL) {
             readFrom = foundAt + findLen;
             size += diff;
         }
-        if (size == len()) {
-            return true;
-        }
-        if (size > capacity() && !changeBuffer(size)) {
+        if(size == len())
+            return false;
+        if(size > capacity() && !changeBuffer(size)) {
+            log_w("String.Replace() Insufficient space to replace string");
             return false;
         }
         int index = len() - 1;
-        while (index >= 0 && (index = lastIndexOf(find, index)) >= 0) {
+        while(index >= 0 && (index = lastIndexOf(findStr, index)) >= 0) {
             readFrom = wbuffer() + index + findLen;
             memmove(readFrom + diff, readFrom, len() - (readFrom - buffer()));
             int newLen = len() + diff;
-            memmove(wbuffer() + index, replace, replaceLen);
+            memmove(wbuffer() + index, replaceStr, replaceLen);
             setLen(newLen);
             wbuffer()[newLen] = 0;
             index--;
