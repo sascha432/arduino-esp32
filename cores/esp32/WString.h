@@ -1020,6 +1020,7 @@ class StringSumHelper: public String {
         }
 };
 
+__attribute__((always_inline))
 inline StringSumHelper & operator +(const StringSumHelper &lhs, const __FlashStringHelper *rhs) {
         return lhs + reinterpret_cast<const char*>(rhs);
 }
